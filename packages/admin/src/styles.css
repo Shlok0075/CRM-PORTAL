@@ -1,0 +1,127 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm;
+  }
+  
+  .card-hover {
+    @apply card hover:shadow-md transition-shadow;
+  }
+  
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors;
+  }
+  
+  .btn-primary {
+    @apply btn bg-emerald-600 text-white hover:bg-emerald-700;
+  }
+  
+  .btn-secondary {
+    @apply btn border border-gray-300 text-gray-700 hover:bg-gray-50;
+  }
+  
+  .btn-ghost {
+    @apply btn text-gray-600 hover:text-gray-900 hover:bg-gray-100;
+  }
+  
+  .btn-icon {
+    @apply p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors;
+  }
+  
+  .form-input {
+    @apply w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent;
+  }
+  
+  .form-label {
+    @apply block text-sm font-medium text-gray-700 mb-1;
+  }
+  
+  .badge {
+    @apply px-2.5 py-1 rounded-full text-xs font-medium;
+  }
+  
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors;
+  }
+  
+  .sidebar-link-active {
+    @apply sidebar-link bg-emerald-600 text-white shadow-lg shadow-emerald-900/20;
+  }
+  
+  .sidebar-link-inactive {
+    @apply sidebar-link text-slate-300 hover:bg-slate-800 hover:text-white;
+  }
+  
+  .page-header {
+    @apply flex items-center justify-between mb-6;
+  }
+  
+  .page-title {
+    @apply text-xl font-bold text-gray-900;
+  }
+  
+  .page-subtitle {
+    @apply text-sm text-gray-500 mt-1;
+  }
+  
+  .stat-card {
+    @apply card p-5 hover:shadow-md transition-shadow;
+  }
+  
+  .empty-state {
+    @apply text-center py-12;
+  }
+  
+  .loading-state {
+    @apply text-center text-gray-500 py-12;
+  }
+  
+  .section-title {
+    @apply font-semibold text-gray-900 mb-4;
+  }
+  
+  .table-container {
+    @apply bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden;
+  }
+  
+  .table-header {
+    @apply bg-gray-50;
+  }
+  
+  .table-cell {
+    @apply px-4 py-3;
+  }
+}
+
+@layer utilities {
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: #cbd5e1 transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background-color: #cbd5e1;
+    border-radius: 3px;
+  }
+}

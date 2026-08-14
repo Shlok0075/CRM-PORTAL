@@ -1,0 +1,46 @@
+version: '3.8'
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: startupgo
+      POSTGRES_PASSWORD: startupgo
+      POSTGRES_DB: startupgo
+    ports:
+      - "5432:5432"
+    volumes:
+      - db-data:/var/lib/postgresql/data
+
+  backend:
+    build: ./packages/backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgresql://startupgo:startupgo@db:5432/startupgo?schema=public"
+      JWT_SECRET: "change-me-for-dev"
+    ports:
+      - "4000:4000"
+
+  admin:
+    build: ./packages/admin
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  mentor:
+    build: ./packages/mentor
+    ports:
+      - "5174:5174"
+    depends_on:
+      - backend
+
+  founder:
+    build: ./packages/founder
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+
+volumes:
+  db-data:

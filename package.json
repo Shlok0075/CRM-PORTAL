@@ -1,0 +1,25 @@
+{
+  "name": "startupgo-crm",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "bootstrap": "pnpm install",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:admin": "pnpm --filter admin dev",
+    "dev:founder": "pnpm --filter founder dev",
+    "dev:mentor": "pnpm --filter mentor dev",
+    "dev": "concurrently \"pnpm dev:backend\" \"pnpm dev:admin\" \"pnpm dev:mentor\" \"pnpm dev:founder\"",
+    "build": "pnpm -w run build"
+  },
+  "dependencies": {
+    "rxjs": "^7.8.2"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.5.4",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^3.4.19"
+  }
+}
