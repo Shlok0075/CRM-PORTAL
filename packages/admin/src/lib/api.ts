@@ -12,10 +12,12 @@ function clearToken() {
 export async function apiFetch(path: string, options: RequestInit = {}) {
   const token = getToken()
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
     ...(options.headers as Record<string, string>),
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
+  }
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,

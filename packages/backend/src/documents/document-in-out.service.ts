@@ -6,7 +6,11 @@ export class DocumentInOutService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, data: any) {
-    return this.prisma.documentInOutLog.create({ data: { ...data, org: { connect: { id: orgId } } } as any })
+    const cleaned = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null && v !== undefined)) as any
+    if (cleaned.returnable === 'yes' || cleaned.returnable === true) cleaned.returnable = true
+    else if (cleaned.returnable === 'no' || cleaned.returnable === false) cleaned.returnable = false
+    else delete cleaned.returnable
+    return this.prisma.documentInOutLog.create({ data: { ...cleaned, org: { connect: { id: orgId } } } as any })
   }
 
   async list(orgId: string, filters: { clientId?: string; direction?: string; status?: string; returnable?: string; from?: string; to?: string }) {

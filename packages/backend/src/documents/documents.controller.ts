@@ -59,7 +59,7 @@ export class DocumentsController {
 
   @UseGuards(JwtGuard)
   @Post('upload')
-  async upload(@Req() req: any, @Body() body: CreateDocumentDto) {
+  async upload(@Req() req: any, @Body() body: any) {
     const orgId = req.user?.orgId
     return this.svc.upload(orgId, { ...body, uploadedBy: req.user?.sub })
   }

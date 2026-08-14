@@ -28,14 +28,14 @@ export class TodosService {
   }
 
   async create(orgId: string, dto: CreateTodoDto) {
-    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined)) as any
+    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined && v !== '')) as any
     const data: any = { ...cleaned, status: 'pending', org: { connect: { id: orgId } } }
     if (cleaned.assigneeId) data.assignee = { connect: { id: cleaned.assigneeId } }
     if (data.dueDate) data.dueDate = new Date(data.dueDate)
     try {
       return await this.prisma.todo.create({ data, include: { assignee: { select: { name: true } } } })
     } catch (err: any) {
-      console.error('TODO CREATE ERROR:', err.message, err.stack)
+      console.error('TODO CREATE ERROR:', err.message, err.stack, JSON.stringify(data))
       throw err
     }
   }

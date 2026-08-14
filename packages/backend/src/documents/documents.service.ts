@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common'
 import { PrismaService } from '../prisma.service'
+import { Response } from 'express'
 
 const DOCUMENT_CATEGORIES = [
   'Financial Statements',
@@ -76,7 +77,11 @@ export class DocumentsService {
   }
 
   async upload(orgId: string, data: any) {
-    return this.prisma.document.create({ data: { ...data, org: { connect: { id: orgId } } } as any })
+    const cleaned = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null && v !== undefined)) as any
+    if (!cleaned.fileUrl && cleaned.fileName) {
+      cleaned.fileUrl = `/uploads/${Date.now()}_${cleaned.fileName}`
+    }
+    return this.prisma.document.create({ data: { ...cleaned, org: { connect: { id: orgId } } } as any })
   }
 
   async reupload(orgId: string, id: string, data: any) {
@@ -101,9 +106,12 @@ export class DocumentsService {
   async bulkDownload(orgId: string, documentIds: string[]) {
     if (!documentIds.length) return { zipUrl: null }
     const docs = await this.prisma.document.findMany({ where: { id: { in: documentIds }, orgId } })
-    return {
-      zipUrl: `/api/files/bulk-download?orgId=${orgId}&ids=${documentIds.join(',')}`,
-      count: docs.length,
-    }
+    const content = docs.map((d: any) => `${d.fileName || 'Untitled'}|${d.category}|${d.fileUrl || ''}|${d.client?.name || '-'}|${d.task?.title || '-'}|${new Date(d.createdAt).toLocaleDateString('en-IN')}`).join('\n')
+    return new Response(content, {
+      headers: {
+        'Content-Type': 'text/plain',
+        'Content-Disposition': 'attachment; filename="documents.txt"',
+      },
+    })
   }
 }

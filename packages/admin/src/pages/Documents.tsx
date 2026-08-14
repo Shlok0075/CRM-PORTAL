@@ -82,9 +82,14 @@ export default function Documents() {
     try {
       const form = e.target as HTMLFormElement
       const formData = new FormData(form)
+      const data = {
+        fileName: formData.get('fileName') as string,
+        category: formData.get('category') as string,
+        fileUrl: `/uploads/${Date.now()}_${formData.get('fileName')}`,
+      }
       await apiFetch('/documents/upload', {
         method: 'POST',
-        body: formData,
+        body: JSON.stringify(data),
       })
       setShowUploadModal(false)
       refetchAll()
