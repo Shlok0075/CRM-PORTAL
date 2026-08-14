@@ -1,0 +1,9 @@
+{
+  "buildCommand": "cd packages/admin && pnpm build",
+  "outputDirectory": "packages/admin/dist",
+  "installCommand": "pnpm install",
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
+}
