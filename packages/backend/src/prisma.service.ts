@@ -49,9 +49,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async ensureSeed() {
     console.log('[DB] ensureSeed: starting')
     try {
-      const org = await this.organization.findFirst({ select: { id: true } })
-      if (!org) {
-        console.log('[DB] ensureSeed: no org found, running seed')
+      const admin = await this.user.findFirst({ where: { email: 'admin@ca-firm.local' }, select: { id: true } })
+      if (!admin) {
+        console.log('[DB] ensureSeed: admin user missing, running seed')
         const { execSync } = await import('child_process')
         try {
           const out = execSync('npx ts-node --transpile-only prisma/seed.ts', { encoding: 'utf8', cwd: process.cwd() })
@@ -61,7 +61,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           throw err
         }
       } else {
-        console.log('[DB] ensureSeed: org exists, skipping seed')
+        console.log('[DB] ensureSeed: admin user exists, skipping seed')
       }
     } catch (err) {
       console.error('[DB] ensureSeed: failed', err)
