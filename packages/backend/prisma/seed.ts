@@ -16,7 +16,7 @@ async function main() {
   })
 
   const existingAdmin = await prisma.user.findFirst({
-    where: { email: 'admin@ca-firm.local', orgId: org.id },
+    where: { email: 'admin@ca-firm.local' },
     select: { id: true },
   })
 
@@ -42,7 +42,7 @@ async function main() {
       email: 'admin@ca-firm.local',
       name: 'CA Admin',
       passwordHash: hash,
-      roleId: role.id,
+      role: { connect: { id: role.id } },
       isActive: true,
     },
   })
