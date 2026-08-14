@@ -18,22 +18,17 @@ async function main() {
   const password = 'adminpass'
   const hash = await bcrypt.hash(password, 10)
 
-  const role = await prisma.role.upsert({
-    where: { id: 'role-admin' },
-    update: {},
-    create: {
-      id: 'role-admin',
-      orgId: org.id,
+  const role = await prisma.role.create({
+    data: {
+      org: { connect: { id: org.id } },
       name: 'Super Admin',
       permissions: JSON.stringify(['*']),
     },
   })
 
-  const user = await prisma.user.upsert({
-    where: { email: 'admin@ca-firm.local' },
-    update: {},
-    create: {
-      orgId: org.id,
+  const user = await prisma.user.create({
+    data: {
+      org: { connect: { id: org.id } },
       email: 'admin@ca-firm.local',
       name: 'CA Admin',
       passwordHash: hash,
@@ -44,7 +39,7 @@ async function main() {
 
   const client1 = await prisma.client.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       name: 'Acme Industries Pvt Ltd',
       pan: 'AACCA1234F',
       gstins: JSON.stringify(['27AACCA1234F1Z5']),
@@ -56,7 +51,7 @@ async function main() {
 
   const client2 = await prisma.client.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       name: 'Beta Technologies',
       pan: 'AABBT5678G',
       gstins: JSON.stringify(['27AABBT5678G1Z3']),
@@ -68,14 +63,14 @@ async function main() {
 
   await prisma.clientGroup.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       name: 'Key Accounts',
     },
   })
 
   await prisma.service.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       name: 'GST Return Filing',
       defaultPrice: 3000,
     },
@@ -83,7 +78,7 @@ async function main() {
 
   await prisma.service.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       name: 'Income Tax Return',
       defaultPrice: 5000,
     },
@@ -91,7 +86,7 @@ async function main() {
 
   await prisma.package.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       name: 'GST + ITR Combo',
       serviceIds: JSON.stringify(['1', '2']),
       price: 7000,
@@ -100,7 +95,7 @@ async function main() {
 
   await prisma.retainer.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       clientId: client1.id,
       packageIds: JSON.stringify(['1']),
       totalAmount: 36000,
@@ -114,7 +109,7 @@ async function main() {
 
   await prisma.task.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       clientId: client1.id,
       title: 'File GSTR-3B for July 2026',
       description: 'Monthly GSTR-3B filing for Acme Industries',
@@ -131,7 +126,7 @@ async function main() {
 
   await prisma.task.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       clientId: client2.id,
       title: 'File ITR for FY 2025-26',
       description: 'Income tax return filing for Beta Technologies',
@@ -148,7 +143,7 @@ async function main() {
 
   await prisma.invoice.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       clientId: client1.id,
       invoiceNumber: 'INV-001',
       lineItems: JSON.stringify([{ description: 'GST Return Filing', quantity: 1, unitPrice: 3000, amount: 3000 }]),
@@ -164,7 +159,7 @@ async function main() {
 
   await prisma.complianceCalendarEntry.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       name: 'GSTR-3B',
       applicableTo: 'all-gst-clients',
       dueDateRule: '20th of next month',
@@ -173,7 +168,7 @@ async function main() {
 
   await prisma.complianceCalendarEntry.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       name: 'GSTR-1',
       applicableTo: 'all-gst-clients',
       dueDateRule: '11th of next month',
@@ -182,7 +177,7 @@ async function main() {
 
   await prisma.messageTemplate.create({
     data: {
-      orgId: org.id,
+      org: { connect: { id: org.id } },
       channel: 'email',
       name: 'Payment Reminder',
       body: 'Dear {client_name}, your invoice {invoice_number} is due on {due_date}.',
