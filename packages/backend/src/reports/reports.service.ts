@@ -27,7 +27,7 @@ export class ReportsService {
     if (query.status) where.status = query.status
     if (query.assignee) {
       const assigneeId = Array.isArray(query.assignee) ? query.assignee[0] : query.assignee
-      where.assigneeIds = { has: assigneeId }
+      where.assigneeIds = assigneeId
     }
 
     const dateField = query.dateField === 'targetDate' ? 'targetDate' : 'dueDate'

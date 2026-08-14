@@ -9,14 +9,14 @@ export class ReceiptsService {
     const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined)) as any
     const data: any = {
       ...cleaned,
-      organization: { connect: { id: orgId } },
+      organizationId: orgId,
       date: cleaned.date ? new Date(cleaned.date) : new Date(),
     }
     return this.prisma.receipt.create({ data, include: { client: true, invoice: true } })
   }
 
   async findAll(orgId: string, query: any) {
-    const where: any = { organization: { connect: { id: orgId } } }
+    const where: any = { organizationId: orgId }
     if (query.clientId) where.clientId = query.clientId
     if (query.invoiceId) where.invoiceId = query.invoiceId
     if (query.mode) where.mode = query.mode

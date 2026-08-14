@@ -255,7 +255,7 @@ export class TasksService {
 
     if (filters.status) where.status = filters.status
     if (filters.serviceType) where.serviceType = filters.serviceType
-    if (filters.assignee) where.assigneeIds = { has: filters.assignee }
+    if (filters.assignee) where.assigneeIds = filters.assignee
 
     if (filters.client) {
       if (Array.isArray(filters.client)) where.clientId = { in: filters.client }
@@ -263,8 +263,7 @@ export class TasksService {
     }
 
     if (filters.tag) {
-      if (Array.isArray(filters.tag)) where.tags = { hasSome: filters.tag }
-      else where.tags = { has: filters.tag }
+      where.tags = { contains: filters.tag }
     }
 
     if (filters.from || filters.to) {
@@ -680,7 +679,7 @@ export class TasksService {
         status: 'not_started',
         isOverdue: false,
       }
-      if (body.clientId) data.client = { connect: { id: body.clientId, orgId } }
+      if (body.clientId) data.client = { connect: { id: body.clientId } }
 
       const task = await tx.task.create({ data })
 
