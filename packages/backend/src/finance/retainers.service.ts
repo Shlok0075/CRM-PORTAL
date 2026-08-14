@@ -17,7 +17,7 @@ export class RetainersService {
         endDate: dto.endDate ? new Date(dto.endDate) : undefined,
         autoRenew: dto.autoRenew || false,
         status: dto.status || 'active',
-      },
+      } as any,
       include: { client: true },
     })
   }

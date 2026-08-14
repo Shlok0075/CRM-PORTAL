@@ -52,7 +52,7 @@ export class ApplicationsService {
         sector: app.sector,
         createdAt: new Date(),
         responsibleUserId: assignToUserId || undefined,
-      },
+      } as any,
     })
     await this.prisma.application.update({ where: { id }, data: { status: 'accepted' } })
     return startup

@@ -16,7 +16,7 @@ export class ExpensesService {
         description: dto.description,
         date: dto.date ? new Date(dto.date) : new Date(),
         attachmentId: dto.attachmentId,
-      },
+      } as any,
       include: { client: true, category: true },
     })
   }

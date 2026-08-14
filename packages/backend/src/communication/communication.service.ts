@@ -43,7 +43,7 @@ export class CommunicationService {
             templateId: body.templateId,
             status: 'sent',
             sentAt: new Date(),
-          },
+          } as any,
         }),
       )
     }

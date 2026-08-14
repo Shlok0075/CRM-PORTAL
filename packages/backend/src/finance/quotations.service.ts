@@ -12,7 +12,7 @@ export class QuotationsService {
         clientId: dto.clientId,
         lineItems: JSON.stringify(dto.lineItems || []),
         status: 'draft',
-      },
+      } as any,
       include: { client: true },
     })
   }

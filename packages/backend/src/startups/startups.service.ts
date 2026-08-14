@@ -7,7 +7,7 @@ export class StartupsService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, dto: CreateStartupDto) {
-    return this.prisma.startup.create({ data: { ...dto, org: { connect: { id: orgId } } } })
+    return this.prisma.startup.create({ data: { ...dto, org: { connect: { id: orgId } } } as any })
   }
 
   async findAll(orgId: string) {
