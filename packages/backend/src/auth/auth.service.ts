@@ -18,8 +18,8 @@ export class AuthService {
   async loginStaff(user: any) {
     const role = user.roleId ? await this.prisma.role.findUnique({ where: { id: user.roleId } }) : null
     const roleName = role?.name || 'user'
-    const payload = { sub: user.id, email: user.email, orgId: user.orgId, roleId: user.roleId, isMentor: user.isMentor }
-    return { accessToken: this.jwt.sign(payload), role: roleName, user: { id: user.id, email: user.email, name: user.name, isMentor: user.isMentor } }
+    const payload = { sub: user.id, email: user.email, orgId: user.orgId, roleId: user.roleId }
+    return { accessToken: this.jwt.sign(payload), role: roleName, user: { id: user.id, email: user.email, name: user.name } }
   }
 
   // stub for OTP: create token and send via email in production
