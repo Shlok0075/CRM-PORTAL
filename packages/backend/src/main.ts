@@ -64,6 +64,15 @@ async function bootstrap() {
 
   const prisma = app.get(PrismaService)
   ;(prisma as any).enableShutdownHooks?.(app)
+
+  try {
+    await prisma.$queryRaw`SELECT 1`
+    console.log('Database connection OK')
+  } catch (err) {
+    console.error('Database connection failed:', err)
+    process.exit(1)
+  }
+
   await app.listen(process.env.PORT || 4000)
   console.log('Backend listening on', process.env.PORT || 4000)
 }
