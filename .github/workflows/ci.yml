@@ -34,8 +34,3 @@ jobs:
           cd packages/admin
           npm install || true
           npm run build || true
-      - name: Build founder
-        run: |
-          cd packages/founder
-          npm install || true
-          npm run build || true

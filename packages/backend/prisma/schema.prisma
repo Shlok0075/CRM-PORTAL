@@ -43,6 +43,9 @@ model Organization {
   attendanceRecords         Attendance[]
   todos                     Todo[]
   notifications             Notification[]
+  applications              Application[]
+  startups                  Startup[]
+  cohorts                   Cohort[]
 }
 
 model Role {
@@ -76,6 +79,8 @@ model User {
   attendanceRecords Attendance[]
   todos             Todo[]
   notifications     Notification[]
+  startupResponsibleFor Startup[]
+  mentor            Mentor?
 }
 
 model Client {
@@ -493,4 +498,125 @@ model Notification {
   payload   String
   readAt    DateTime?
   createdAt DateTime     @default(now())
+}
+
+model Application {
+  id             String   @id @default(uuid())
+  org            Organization @relation(fields: [orgId], references: [id])
+  orgId          String
+  startupName    String
+  sector         String?
+  stage          String?
+  pitchDeckUrl   String?
+  askAmount      Float?
+  source         String?
+  status         String?  @default("pending")
+  submittedAt    DateTime @default(now())
+  founderNames   String
+  reviewerIds    String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model Startup {
+  id               String   @id @default(uuid())
+  org              Organization @relation(fields: [orgId], references: [id])
+  orgId            String
+  name             String
+  sector           String?
+  businessModel    String?
+  incorporationDate DateTime?
+  status           String?
+  responsibleUser  User?    @relation(fields: [responsibleUserId], references: [id])
+  responsibleUserId String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  kpiCheckIns      KpiCheckIn[]
+  cohortEnrollments CohortEnrollment[]
+  mentorAssignments MentorAssignment[]
+  mentorSessionLogs MentorSessionLog[]
+}
+
+model Cohort {
+  id          String   @id @default(uuid())
+  org         Organization @relation(fields: [orgId], references: [id])
+  orgId       String
+  name        String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  enrollments CohortEnrollment[]
+  curriculum  Curriculum[]
+}
+
+model CohortEnrollment {
+  id         String   @id @default(uuid())
+  cohort     Cohort   @relation(fields: [cohortId], references: [id])
+  cohortId   String
+  startup    Startup  @relation(fields: [startupId], references: [id])
+  startupId  String
+  enrolledAt DateTime @default(now())
+
+  @@unique([cohortId, startupId])
+}
+
+model Curriculum {
+  id          String   @id @default(uuid())
+  cohort      Cohort   @relation(fields: [cohortId], references: [id])
+  cohortId    String
+  weekNumber  Int
+  title       String?
+  description String?
+  createdAt   DateTime @default(now())
+}
+
+model KpiCheckIn {
+  id          String   @id @default(uuid())
+  startup     Startup  @relation(fields: [startupId], references: [id])
+  startupId   String
+  periodDate  DateTime
+  metrics     String
+  submittedBy String?
+  createdAt   DateTime @default(now())
+}
+
+model Mentor {
+  id           String   @id @default(uuid())
+  user         User     @relation(fields: [userId], references: [id])
+  userId       String   @unique
+  bio          String?
+  expertiseTags String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  assignments   MentorAssignment[]
+  sessionLogs   MentorSessionLog[]
+}
+
+model MentorAssignment {
+  id        String   @id @default(uuid())
+  mentor    Mentor   @relation(fields: [mentorId], references: [id])
+  mentorId  String
+  startup   Startup  @relation(fields: [startupId], references: [id])
+  startupId String
+  createdAt DateTime @default(now())
+
+  @@unique([mentorId, startupId])
+}
+
+model MentorSessionLog {
+  id              String   @id @default(uuid())
+  mentor          Mentor   @relation(fields: [mentorId], references: [id])
+  mentorId        String
+  startup         Startup  @relation(fields: [startupId], references: [id])
+  startupId       String
+  date            DateTime
+  durationMinutes Int?
+  notes           String?
+  actionItems     String?
+  createdAt       DateTime @default(now())
 }

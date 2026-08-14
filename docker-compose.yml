@@ -28,19 +28,5 @@ services:
     depends_on:
       - backend
 
-  mentor:
-    build: ./packages/mentor
-    ports:
-      - "5174:5174"
-    depends_on:
-      - backend
-
-  founder:
-    build: ./packages/founder
-    ports:
-      - "3000:3000"
-    depends_on:
-      - backend
-
 volumes:
   db-data:

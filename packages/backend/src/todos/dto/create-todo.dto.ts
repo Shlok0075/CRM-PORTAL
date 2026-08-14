@@ -1,7 +1,7 @@
 import { IsString, IsOptional } from 'class-validator'
 
 export class CreateTodoDto {
-  @IsString() title: string
+  @IsString() title!: string
   @IsOptional() @IsString() assigneeId?: string
   @IsOptional() @IsString() dueDate?: string
   @IsOptional() @IsString() repeatRule?: string

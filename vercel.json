@@ -1,5 +1,5 @@
 {
-  "buildCommand": "cd packages/admin && pnpm build",
+  "buildCommand": "pnpm --filter admin build",
   "outputDirectory": "packages/admin/dist",
   "installCommand": "pnpm install",
   "framework": null,
