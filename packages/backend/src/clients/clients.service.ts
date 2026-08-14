@@ -35,7 +35,7 @@ export class ClientsService {
     const cleaned = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null && v !== undefined)) as any
     if (!cleaned.gstins) cleaned.gstins = ''
     return this.prisma.client.create({
-      data: { ...cleaned, org: { connect: { id: orgId } } },
+      data: { ...cleaned, org: { connect: { id: orgId } } } as any,
       include: { group: true, responsibleUser: true },
     })
   }
@@ -59,7 +59,7 @@ export class ClientsService {
     return this.prisma.$transaction(
       clients.map((c) =>
         this.prisma.client.create({
-          data: { ...c, org: { connect: { id: orgId } } },
+          data: { ...c, org: { connect: { id: orgId } } } as any,
         }),
       ),
     )
@@ -96,7 +96,7 @@ export class ClientsService {
 
   async createGroup(orgId: string, data: any) {
     return this.prisma.clientGroup.create({
-      data: { ...data, org: { connect: { id: orgId } } },
+      data: { ...data, org: { connect: { id: orgId } } } as any,
     })
   }
 

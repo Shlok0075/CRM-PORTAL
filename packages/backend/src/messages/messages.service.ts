@@ -7,7 +7,7 @@ export class MessagesService {
 
   async sendEmail(orgId: string, startupId: string | null, templateId: string, payload: any) {
     // Stub: In production send via SMTP or external provider
-    return this.prisma.messageLog.create({ data: { org: { connect: { id: orgId } }, startupId: startupId || undefined, channel: 'email', templateId, status: 'queued', sentAt: new Date() } })
+    return this.prisma.messageLog.create({ data: { org: { connect: { id: orgId } }, startupId: startupId || undefined, channel: 'email', templateId, status: 'queued', sentAt: new Date() } as any })
   }
 
   async listLogs(orgId: string) {

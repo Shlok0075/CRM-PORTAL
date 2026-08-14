@@ -76,7 +76,7 @@ export class DocumentsService {
   }
 
   async upload(orgId: string, data: any) {
-    return this.prisma.document.create({ data: { ...data, org: { connect: { id: orgId } } } })
+    return this.prisma.document.create({ data: { ...data, org: { connect: { id: orgId } } } as any })
   }
 
   async reupload(orgId: string, id: string, data: any) {
