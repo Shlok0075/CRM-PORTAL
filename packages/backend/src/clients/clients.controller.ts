@@ -40,13 +40,13 @@ export class ClientsController {
   }
 
   @Get('dsc/expiring')
-  async getExpiringDsc(@Query('days') days?: string, @Req() req: any) {
+  async getExpiringDsc(@Req() req: any, @Query('days') days?: string) {
     const d = days ? parseInt(days, 10) : 30
     return this.clientsService.getExpiringDsc(req.user.orgId, d)
   }
 
   @Get()
-  async getClients(@Query('search') search?: string, @Query('status') status?: string, @Req() req: any) {
+  async getClients(@Req() req: any, @Query('search') search?: string, @Query('status') status?: string) {
     return this.clientsService.getClients(req.user.orgId, search, status)
   }
 

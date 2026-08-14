@@ -14,7 +14,7 @@ export class ApplicationsService {
   }
 
   async create(orgId: string, dto: CreateApplicationDto) {
-    const data: any = { ...this.serialize(dto), orgId }
+    const data: any = { ...this.serialize(dto), org: { connect: { id: orgId } } }
     if (!data.reviewerIds) data.reviewerIds = JSON.stringify([])
     if (!data.founderNames) data.founderNames = JSON.stringify([])
     return this.prisma.application.create({ data })
@@ -47,7 +47,7 @@ export class ApplicationsService {
     const app = await this.findOne(id)
     const startup = await this.prisma.startup.create({
       data: {
-        orgId: app.orgId,
+        org: { connect: { id: app.orgId } },
         name: app.startupName,
         sector: app.sector,
         createdAt: new Date(),

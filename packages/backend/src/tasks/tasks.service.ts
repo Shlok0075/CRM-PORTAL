@@ -192,7 +192,7 @@ export class TasksService {
     const { clientIds, recurrenceRuleId, ...rest } = dto
     const data: any = {
       ...rest,
-      orgId,
+      org: { connect: { id: orgId } },
       tags: this.toStrArray(rest.tags),
       customFields: this.serializeCustomFields(rest.customFields),
       isOverdue: this.computeOverdue(rest.dueDate, rest.status || 'not_started'),
@@ -203,7 +203,7 @@ export class TasksService {
       data.assigneeIds = rest.assigneeIds || null
     }
     console.log('CREATE TASK DATA:', JSON.stringify(data))
-    if (recurrenceRuleId) data.recurrenceRule = { connect: { id: recurrenceRuleId, orgId } }
+    if (recurrenceRuleId) data.recurrenceRule = { connect: { id: recurrenceRuleId } }
     if (!data.status) data.status = 'not_started'
     if (!data.priority) data.priority = 'medium'
     try {
@@ -234,16 +234,16 @@ export class TasksService {
         this.prisma.task.create({
           data: {
             ...rest,
-            orgId,
+            org: { connect: { id: orgId } },
             clientId: c.id,
             assigneeIds: this.normalizeAssigneeIds(rest.assigneeIds),
             tags: this.toStrArray(rest.tags),
             customFields: this.serializeCustomFields(rest.customFields),
-            recurrenceRule: recurrenceRuleId ? { connect: { id: recurrenceRuleId, orgId } } : undefined,
+            recurrenceRule: recurrenceRuleId ? { connect: { id: recurrenceRuleId } } : undefined,
             status: rest.status || 'not_started',
             priority: rest.priority || 'medium',
             isOverdue: this.computeOverdue(rest.dueDate, rest.status || 'not_started'),
-          },
+          } as any,
         }),
       ),
     )
@@ -628,7 +628,7 @@ export class TasksService {
       for (const template of rule.tasks) {
         const newTask = await this.prisma.task.create({
           data: {
-            orgId,
+            org: { connect: { id: orgId } },
             clientId: template.clientId,
             title: template.title,
             description: template.description,
@@ -644,7 +644,7 @@ export class TasksService {
             targetDate: template.targetDate
               ? this.addInterval(new Date(template.targetDate), rule.frequency, rule.interval)
               : null,
-          },
+          } as any,
         })
         generated.push(this.serializeTask(newTask))
       }
@@ -670,7 +670,7 @@ export class TasksService {
 
     const created = await this.prisma.$transaction(async (tx) => {
       const data: any = {
-        orgId,
+        org: { connect: { id: orgId } },
         title,
         description: tmpl.defaultDescription,
         priority: tmpl.priority,

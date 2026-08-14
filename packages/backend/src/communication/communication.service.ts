@@ -6,7 +6,7 @@ export class CommunicationService {
   constructor(private prisma: PrismaService) {}
 
   async createTemplate(orgId: string, data: { channel: string; name: string; body: string }) {
-    return this.prisma.messageTemplate.create({ data: { ...data, orgId } })
+    return this.prisma.messageTemplate.create({ data: { ...data, org: { connect: { id: orgId } } } })
   }
 
   async listTemplates(orgId: string, channel?: string) {
@@ -37,7 +37,7 @@ export class CommunicationService {
       logs.push(
         this.prisma.messageLog.create({
           data: {
-            orgId,
+            org: { connect: { id: orgId } },
             clientId,
             channel: body.channel,
             templateId: body.templateId,

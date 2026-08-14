@@ -14,7 +14,7 @@ export class MentorsService {
 
   async create(orgId: string, dto: CreateMentorDto) {
     const data = this.serialize(dto)
-    const user = await this.prisma.user.create({ data: { orgId, email: data.email, name: data.name, isMentor: true } })
+    const user = await this.prisma.user.create({ data: { org: { connect: { id: orgId } }, email: data.email, name: data.name, isMentor: true } })
     const mentor = await this.prisma.mentor.create({ data: { userId: user.id, expertiseTags: data.expertiseTags || JSON.stringify([]), bio: data.bio } })
     return { user, mentor: { ...mentor, expertiseTags: mentor.expertiseTags ? JSON.parse(mentor.expertiseTags) : [] } }
   }

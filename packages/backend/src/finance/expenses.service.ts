@@ -8,7 +8,7 @@ export class ExpensesService {
   async create(orgId: string, dto: any) {
     return this.prisma.expense.create({
       data: {
-        orgId,
+        org: { connect: { id: orgId } },
         clientId: dto.clientId,
         categoryId: dto.categoryId,
         amount: dto.amount,
@@ -56,7 +56,7 @@ export class ExpensesService {
   }
 
   async createCategory(orgId: string, dto: { name: string }) {
-    return this.prisma.expenseCategory.create({ data: { orgId, name: dto.name } })
+    return this.prisma.expenseCategory.create({ data: { org: { connect: { id: orgId } }, name: dto.name } })
   }
 
   async findCategories(orgId: string) {

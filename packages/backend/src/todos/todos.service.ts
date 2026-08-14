@@ -28,7 +28,7 @@ export class TodosService {
   }
 
   async create(orgId: string, dto: CreateTodoDto) {
-    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined))
+    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined)) as any
     const data: any = { ...cleaned, status: 'pending', org: { connect: { id: orgId } } }
     if (cleaned.assigneeId) data.assignee = { connect: { id: cleaned.assigneeId } }
     if (data.dueDate) data.dueDate = new Date(data.dueDate)

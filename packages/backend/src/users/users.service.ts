@@ -25,7 +25,7 @@ export class UsersService {
   async createUser(orgId: string, email: string, name?: string, password?: string) {
     const hash = password ? await bcrypt.hash(password, 10) : null
     return this.prisma.user.create({
-      data: { orgId, email, name, passwordHash: hash }
+      data: { org: { connect: { id: orgId } }, email, name, passwordHash: hash }
     })
   }
 

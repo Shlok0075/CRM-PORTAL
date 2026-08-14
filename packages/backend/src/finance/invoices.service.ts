@@ -6,7 +6,7 @@ export class InvoicesService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, dto: any) {
-    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined))
+    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined)) as any
     let lineItems = cleaned.lineItems || []
     if (typeof lineItems === 'string') {
       try { lineItems = JSON.parse(lineItems) } catch { lineItems = [] }
@@ -22,7 +22,7 @@ export class InvoicesService {
 
     return this.prisma.invoice.create({
       data: {
-        orgId,
+        org: { connect: { id: orgId } },
         clientId: cleaned.clientId,
         billingProfileId: cleaned.billingProfileId,
         invoiceNumber: await this.generateInvoiceNumber(orgId),
@@ -46,7 +46,7 @@ export class InvoicesService {
             hsnSac: item.hsnSac,
           })),
         },
-      },
+      } as any,
       include: { lineItemsList: true, client: true, billingProfile: true },
     })
   }
@@ -63,7 +63,7 @@ export class InvoicesService {
     }
 
     const invoices = await this.prisma.invoice.findMany({
-      where,
+      where: where as any,
       include: { client: { select: { id: true, name: true } }, lineItemsList: true, creditNotes: true, receipts: true },
       orderBy: { createdAt: 'desc' },
     })
@@ -204,7 +204,7 @@ export class InvoicesService {
     if (dto.amount > (invoice.total || 0)) throw new BadRequestException('Credit note amount exceeds invoice total')
 
     return this.prisma.creditNote.create({
-      data: { invoiceId, amount: dto.amount, reason: dto.reason, organizationId: invoice.orgId },
+      data: { invoiceId, amount: dto.amount, reason: dto.reason, organization: { connect: { id: invoice.orgId } } },
     })
   }
 
@@ -214,7 +214,7 @@ export class InvoicesService {
 
   async createBillingProfile(orgId: string, dto: { name: string; clientIds: string[] }) {
     return this.prisma.billingProfile.create({
-      data: { orgId, name: dto.name, clientIds: JSON.stringify(dto.clientIds || []) },
+      data: { org: { connect: { id: orgId } }, name: dto.name, clientIds: JSON.stringify(dto.clientIds || []) },
     })
   }
 
@@ -276,7 +276,7 @@ export class InvoicesService {
     }
 
     const invoices = await this.prisma.invoice.findMany({
-      where,
+      where: where as any,
       include: { client: { select: { id: true, name: true } } },
     })
 

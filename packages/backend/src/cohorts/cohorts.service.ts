@@ -6,7 +6,7 @@ export class CohortsService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, dto: any) {
-    return this.prisma.cohort.create({ data: { ...dto, orgId } })
+    return this.prisma.cohort.create({ data: { ...dto, org: { connect: { id: orgId } } } })
   }
 
   async findAll(orgId: string) {

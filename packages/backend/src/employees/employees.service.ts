@@ -24,10 +24,10 @@ export class EmployeesService {
   }
 
   async create(orgId: string, dto: CreateEmployeeDto) {
-    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined))
+    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined)) as any
     const hash = await bcrypt.hash(cleaned.password, 10)
     return this.prisma.user.create({
-      data: { orgId, email: cleaned.email, name: cleaned.name, passwordHash: hash, phone: cleaned.phone, designation: cleaned.designation, isActive: true },
+      data: { org: { connect: { id: orgId } }, email: cleaned.email, name: cleaned.name, passwordHash: hash, phone: cleaned.phone, designation: cleaned.designation, isActive: true },
       select: { id: true, email: true, name: true, phone: true, designation: true, isActive: true, createdAt: true },
     })
   }

@@ -6,7 +6,7 @@ export class DocumentInOutService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, data: any) {
-    return this.prisma.documentInOutLog.create({ data: { ...data, orgId } })
+    return this.prisma.documentInOutLog.create({ data: { ...data, org: { connect: { id: orgId } } } })
   }
 
   async list(orgId: string, filters: { clientId?: string; direction?: string; status?: string; returnable?: string; from?: string; to?: string }) {

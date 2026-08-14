@@ -8,7 +8,7 @@ export class RetainersService {
   async create(orgId: string, dto: any) {
     return this.prisma.retainer.create({
       data: {
-        orgId,
+        org: { connect: { id: orgId } },
         clientId: dto.clientId,
         packageIds: JSON.stringify(dto.packageIds || []),
         totalAmount: dto.totalAmount,

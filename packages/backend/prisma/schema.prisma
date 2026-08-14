@@ -473,6 +473,8 @@ model Attendance {
   outTime   DateTime?
   status    String
   createdAt DateTime     @default(now())
+
+  @@unique([userId, date])
 }
 
 model Todo {

@@ -8,7 +8,7 @@ export class QuotationsService {
   async create(orgId: string, dto: any) {
     return this.prisma.quotation.create({
       data: {
-        orgId,
+        org: { connect: { id: orgId } },
         clientId: dto.clientId,
         lineItems: JSON.stringify(dto.lineItems || []),
         status: 'draft',
