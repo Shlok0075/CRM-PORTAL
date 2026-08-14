@@ -16,8 +16,11 @@ export class AuthService {
   }
 
   async loginStaff(user: any) {
-    const role = user.roleId ? await this.prisma.role.findUnique({ where: { id: user.roleId } }) : null
-    const roleName = role?.name || 'user'
+    let roleName = 'user'
+    if (user.roleId) {
+      const role = await this.prisma.role.findUnique({ where: { id: user.roleId } })
+      roleName = role?.name || 'user'
+    }
     const payload = { sub: user.id, email: user.email, orgId: user.orgId, roleId: user.roleId }
     return { accessToken: this.jwt.sign(payload), role: roleName, user: { id: user.id, email: user.email, name: user.name } }
   }
