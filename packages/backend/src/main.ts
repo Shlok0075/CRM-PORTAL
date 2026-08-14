@@ -53,7 +53,9 @@ class AppModule {}
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   app.setGlobalPrefix('api')
-  app.enableCors({ origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000'], credentials: true })
+  
+  const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(o => o.trim()) || ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000']
+  app.enableCors({ origin: allowedOrigins, credentials: true })
 
   app.use(express.json())
   app.use(express.urlencoded({ extended: true }))

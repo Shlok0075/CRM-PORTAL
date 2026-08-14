@@ -20,3 +20,5 @@ services:
         fromDatabase:
           name: crm-portal-db
           property: connectionString
+      - key: CORS_ORIGIN
+        value: https://crm-portal-admin-9f2z.vercel.app
