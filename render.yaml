@@ -1,0 +1,22 @@
+databases:
+  - name: crm-portal-db
+    plan: free
+    databaseName: crm_portal
+    user: crm_user
+
+services:
+  - type: web
+    plan: free
+    name: crm-portal-backend
+    runtime: node
+    buildCommand: cd packages/backend && pnpm install && pnpm run build && pnpm run prisma:generate
+    startCommand: cd packages/backend && pnpm run start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_SECRET
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: crm-portal-db
+          property: connectionString
