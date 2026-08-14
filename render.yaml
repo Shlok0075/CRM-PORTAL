@@ -10,7 +10,7 @@ services:
     name: crm-portal-backend
     runtime: node
     buildCommand: cd packages/backend && npm install && npx prisma generate && npm run build
-    startCommand: cd packages/backend && npx prisma db push --verbose 2>&1 && npx prisma generate 2>&1 && npm run prisma:seed 2>&1 && npm run start 2>&1
+    startCommand: cd packages/backend && npm run start
     envVars:
       - key: NODE_ENV
         value: production

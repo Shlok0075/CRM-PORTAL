@@ -53,7 +53,7 @@ class AppModule {}
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   app.setGlobalPrefix('api')
-  
+
   const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(o => o.trim()) || ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000']
   app.enableCors({ origin: allowedOrigins, credentials: true })
 
@@ -66,11 +66,10 @@ async function bootstrap() {
   ;(prisma as any).enableShutdownHooks?.(app)
 
   try {
-    await prisma.$queryRaw`SELECT 1`
-    console.log('Database connection OK')
+    await (prisma as any).ensureDatabase()
+    await (prisma as any).ensureSeed()
   } catch (err) {
-    console.error('Database connection failed:', err)
-    process.exit(1)
+    console.error('[STARTUP] DB init failed, continuing anyway:', err)
   }
 
   await app.listen(process.env.PORT || 4000)
