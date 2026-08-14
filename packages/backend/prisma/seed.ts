@@ -15,6 +15,16 @@ async function main() {
     },
   })
 
+  const existingAdmin = await prisma.user.findFirst({
+    where: { email: 'admin@ca-firm.local', orgId: org.id },
+    select: { id: true },
+  })
+
+  if (existingAdmin) {
+    console.log('Database already seeded, skipping.')
+    return
+  }
+
   const password = 'adminpass'
   const hash = await bcrypt.hash(password, 10)
 

@@ -9,7 +9,7 @@ services:
     plan: free
     name: crm-portal-backend
     runtime: node
-    buildCommand: cd packages/backend && npm install && npx prisma generate && npm run build
+    buildCommand: cd packages/backend && npm install && npx prisma generate && npx prisma db push && npm run prisma:seed && npm run build
     startCommand: cd packages/backend && npm run start
     envVars:
       - key: NODE_ENV
