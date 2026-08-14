@@ -65,7 +65,7 @@ export class CommunicationService {
     return this.prisma.messageLog.findMany({
       where,
       orderBy: { sentAt: 'desc' },
-      include: { client: { select: { name: true } }, template: { select: { name: true } } },
+      include: { client: { select: { name: true } } },
     })
   }
 }

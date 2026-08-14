@@ -40,7 +40,7 @@ export class CohortsService {
     const cohort = await this.prisma.cohort.findUnique({
       where: { id: cohortId },
       include: {
-        enrollments: { include: { startup: { include: { milestones: true, kpiCheckIns: { take: 1, orderBy: { periodDate: 'desc' } } } } } },
+        enrollments: { include: { startup: { include: { kpiCheckIns: { take: 1, orderBy: { periodDate: 'desc' } } } } } },
         curriculum: { orderBy: { weekNumber: 'asc' } },
       },
     })

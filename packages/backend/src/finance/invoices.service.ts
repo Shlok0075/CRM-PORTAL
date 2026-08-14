@@ -204,7 +204,7 @@ export class InvoicesService {
     if (dto.amount > (invoice.total || 0)) throw new BadRequestException('Credit note amount exceeds invoice total')
 
     return this.prisma.creditNote.create({
-      data: { invoiceId, amount: dto.amount, reason: dto.reason, organization: { connect: { id: invoice.orgId } } },
+      data: { invoiceId, amount: dto.amount, reason: dto.reason, organizationId: invoice.orgId },
     })
   }
 
