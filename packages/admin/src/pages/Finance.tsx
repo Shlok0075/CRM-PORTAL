@@ -61,7 +61,7 @@ export default function Finance() {
           status: 'draft',
           issueDate: new Date().toISOString(),
           dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          lineItems: JSON.stringify([{ description: formData.get('description') as string, quantity: 1, unitPrice: amount, amount }]),
+          lineItems: [{ description: formData.get('description') as string, quantity: 1, unitPrice: amount, amount }],
           hsnSac: formData.get('hsnSac') as string || undefined,
           placeOfSupply: formData.get('placeOfSupply') as string || undefined,
         }),
@@ -394,12 +394,26 @@ export default function Finance() {
               <h3 className="text-xl font-bold text-gray-900">Create Receipt</h3>
               <button onClick={() => setShowReceiptModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
             </div>
-            <form onSubmit={handleCreateReceipt}>
-              <div className="p-6 space-y-4">
-                <div>
-                  <label className="form-label">Amount (₹)</label>
-                  <input name="amount" type="number" className="form-input" placeholder="0" required />
-                </div>
+             <form onSubmit={handleCreateReceipt}>
+               <div className="p-6 space-y-4">
+                 <div>
+                   <label className="form-label">Client</label>
+                   <select name="clientId" className="form-input" required>
+                     <option value="">Select client</option>
+                     {clients.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                   </select>
+                 </div>
+                 <div>
+                   <label className="form-label">Invoice (optional)</label>
+                   <select name="invoiceId" className="form-input">
+                     <option value="">None</option>
+                     {invoices.map((inv: any) => <option key={inv.id} value={inv.id}>{inv.invoiceNumber} - ₹{inv.total?.toLocaleString('en-IN')}</option>)}
+                   </select>
+                 </div>
+                 <div>
+                   <label className="form-label">Amount (₹)</label>
+                   <input name="amount" type="number" className="form-input" placeholder="0" required />
+                 </div>
                 <div>
                   <label className="form-label">Payment Mode</label>
                   <select name="mode" className="form-input">

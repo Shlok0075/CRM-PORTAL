@@ -28,6 +28,9 @@ export default function Tasks() {
   const { data: clientsData } = useApi('/clients?limit=100')
   const clients = clientsData?.data || clientsData || []
 
+  const { data: employeesData } = useApi('/employees')
+  const employees = employeesData?.data || employeesData || []
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
@@ -123,7 +126,7 @@ export default function Tasks() {
       {/* Task Summary Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {[
-          { label: 'Pending', count: tasks.filter((t: any) => t.status === 'pending').length, icon: Circle, color: 'text-amber-600 bg-amber-50', border: 'border-amber-200' },
+                  { label: 'Pending', count: tasks.filter((t: any) => t.status === 'not_started').length, icon: Circle, color: 'text-amber-600 bg-amber-50', border: 'border-amber-200' },
           { label: 'In Progress', count: tasks.filter((t: any) => t.status === 'in_progress').length, icon: Play, color: 'text-blue-600 bg-blue-50', border: 'border-blue-200' },
           { label: 'Completed', count: tasks.filter((t: any) => t.status === 'completed' || t.status === 'verified').length, icon: CheckCircle2, color: 'text-emerald-600 bg-emerald-50', border: 'border-emerald-200' },
           { label: 'Overdue', count: tasks.filter((t: any) => t.isOverdue || t.status === 'overdue').length, icon: AlertTriangle, color: 'text-red-600 bg-red-50', border: 'border-red-200' },
@@ -176,14 +179,15 @@ export default function Tasks() {
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Task</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Client</th>
+                  <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Assignee</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Due Date</th>
                   <th className="text-left px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
                   <th className="text-right px-6 py-4 text-xs font-semibold text-gray-500 uppercase tracking-wider">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
-                {tasks.length === 0 ? (
-                  <tr><td colSpan={5} className="px-6 py-8 text-center text-gray-400 text-sm">No tasks found. Create your first task.</td></tr>
+                  {tasks.length === 0 ? (
+                    <tr><td colSpan={6} className="px-6 py-8 text-center text-gray-400 text-sm">No tasks found. Create your first task.</td></tr>
                 ) : tasks.map((task: any) => (
                   <tr key={task.id} className="hover:bg-gray-50/50 transition-colors">
                     <td className="px-6 py-4">
@@ -191,7 +195,7 @@ export default function Tasks() {
                         {task.isOverdue && <AlertTriangle size={18} className="text-red-600 mt-0.5" />}
                         {task.status === 'completed' && <CheckCircle2 size={18} className="text-emerald-600 mt-0.5" />}
                         {task.status === 'in_progress' && <Play size={18} className="text-blue-600 mt-0.5" />}
-                        {!task.isOverdue && task.status === 'pending' && <Circle size={18} className="text-gray-300 mt-0.5" />}
+                        {!task.isOverdue && task.status === 'not_started' && <Circle size={18} className="text-gray-300 mt-0.5" />}
                         <div>
                           <p className="font-semibold text-sm text-gray-900">{task.title}</p>
                           <p className="text-xs text-gray-500">{task.serviceType || '-'}</p>
@@ -199,6 +203,7 @@ export default function Tasks() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-sm text-gray-600">{task.client?.name || '-'}</td>
+                    <td className="px-6 py-4 text-sm text-gray-600">{task.assignee?.name || '-'}</td>
                     <td className={`px-6 py-3 text-sm ${task.isOverdue ? 'text-red-600 font-medium' : 'text-gray-600'}`}>
                       {task.dueDate ? new Date(task.dueDate).toLocaleDateString('en-IN') : '-'}
                     </td>
@@ -257,8 +262,8 @@ export default function Tasks() {
                    <label className="form-label">Description</label>
                    <textarea name="description" className="form-input" rows={2} placeholder="Task description..."></textarea>
                  </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
+                 <div className="grid grid-cols-2 gap-4">
+                   <div>
                     <label className="form-label">Service Type</label>
                     <select name="serviceType" className="form-input">
                       <option value="GST Return">GST Return</option>
@@ -277,6 +282,13 @@ export default function Tasks() {
                       <option value="urgent">Urgent</option>
                     </select>
                   </div>
+                </div>
+                <div>
+                  <label className="form-label">Assign To</label>
+                  <select name="assigneeIds" className="form-input">
+                    <option value="">Unassigned</option>
+                    {employees.map((emp: any) => <option key={emp.id} value={emp.id}>{emp.name} ({emp.designation || 'Employee'})</option>)}
+                  </select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -331,6 +343,10 @@ export default function Tasks() {
                   <div className="p-4 bg-gray-50 rounded-xl">
                     <p className="text-xs text-gray-500 mb-1">Service</p>
                     <p className="text-sm font-medium text-gray-900">{activeTask.serviceType || '-'}</p>
+                  </div>
+                  <div className="p-4 bg-gray-50 rounded-xl">
+                    <p className="text-xs text-gray-500 mb-1">Assignee</p>
+                    <p className="text-sm font-medium text-gray-900">{activeTask.assignee?.name || 'Unassigned'}</p>
                   </div>
                   <div className="p-4 bg-gray-50 rounded-xl">
                     <p className="text-xs text-gray-500 mb-1">Due Date</p>

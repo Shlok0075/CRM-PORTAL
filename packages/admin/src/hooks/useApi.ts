@@ -66,7 +66,15 @@ export default function useApi(url: string | null, options: any = {}) {
         window.location.href = '/login'
         return null
       }
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      if (!res.ok) {
+        const errText = await res.text()
+        let errData: any = {}
+        try { errData = JSON.parse(errText) } catch {}
+        const err = new Error(errData?.message || `HTTP ${res.status}`) as any
+        err.status = res.status
+        err.data = errData
+        throw err
+      }
       if (res.status === 204) { setData(null); return null }
       const json = await res.json()
       setData(json)

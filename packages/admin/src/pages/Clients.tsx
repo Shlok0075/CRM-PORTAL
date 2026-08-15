@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Search, Mail, Phone, MapPin, ChevronRight, X, RefreshCw } from 'lucide-react'
+import { Plus, Search, Mail, Phone, MapPin, ChevronRight, X, RefreshCw, Edit } from 'lucide-react'
 import { apiFetch } from '../lib/api'
 
 export default function Clients() {
@@ -9,7 +9,9 @@ export default function Clients() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [selectedClient, setSelectedClient] = useState<any | null>(null)
+  const [editingClient, setEditingClient] = useState<any | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
   const loadClients = async () => {
@@ -68,6 +70,44 @@ export default function Clients() {
       loadClients()
     } catch (err: any) {
       alert(err.data?.message || err.message || 'Failed to delete client')
+    }
+  }
+
+  const handleEdit = (client: any) => {
+    setEditingClient(client)
+    setShowEditModal(true)
+  }
+
+  const handleUpdate = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingClient) return
+    setSubmitting(true)
+    try {
+      const form = e.target as HTMLFormElement
+      const formData = new FormData(form)
+      const data: any = {
+        name: formData.get('name') as string,
+        pan: formData.get('pan') as string || undefined,
+        gstins: formData.get('gstin') ? JSON.stringify([formData.get('gstin')]) : '[]',
+        type: formData.get('type') as string || undefined,
+        contactInfo: JSON.stringify({
+          email: formData.get('email') as string,
+          phone: formData.get('phone') as string,
+          address: formData.get('address') as string,
+        }),
+        status: formData.get('status') as string,
+      }
+      await apiFetch(`/clients/${editingClient.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify(data),
+      })
+      setShowEditModal(false)
+      setEditingClient(null)
+      loadClients()
+    } catch (err: any) {
+      alert(err.data?.message || err.message || 'Failed to update client')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -166,6 +206,7 @@ export default function Clients() {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button onClick={() => setSelectedClient(client)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors" title="View Details"><ChevronRight size={16} /></button>
+                          <button onClick={() => handleEdit(client)} className="p-1.5 hover:bg-blue-50 rounded-lg text-blue-500 transition-colors" title="Edit"><Edit size={16} /></button>
                           <button onClick={() => handleDelete(client.id)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title="Delete"><X size={16} /></button>
                         </div>
                       </td>
@@ -222,9 +263,9 @@ export default function Clients() {
 
       {showAddModal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-xl font-bold text-gray-900">Add New Client</h3>
+              <h3 className="text-xl font-bold text-gray-900">Add Client</h3>
               <button onClick={() => setShowAddModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
             </div>
             <form onSubmit={handleCreate}>
@@ -246,11 +287,19 @@ export default function Clients() {
                 <div>
                   <label className="form-label">Client Type</label>
                   <select name="type" className="form-input">
+                    <option value="">Select type</option>
                     <option value="private_limited">Private Limited</option>
                     <option value="public_limited">Public Limited</option>
                     <option value="llp">LLP</option>
                     <option value="partnership">Partnership</option>
                     <option value="proprietorship">Proprietorship</option>
+                    <option value="section_8">Section 8 Company</option>
+                    <option value="society">Society</option>
+                    <option value="trust">Trust</option>
+                    <option value="cooperative">Cooperative</option>
+                    <option value="ngo">NGO</option>
+                    <option value="government">Government</option>
+                    <option value="other">Other</option>
                   </select>
                 </div>
                 <div>
@@ -268,6 +317,76 @@ export default function Clients() {
                 <div className="flex gap-3 pt-2">
                   <button type="submit" disabled={submitting} className="btn-primary flex-1 disabled:opacity-50">{submitting ? 'Saving...' : 'Add Client'}</button>
                   <button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary flex-1">Cancel</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEditModal && editingClient && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">Edit Client</h3>
+              <button onClick={() => { setShowEditModal(false); setEditingClient(null) }} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleUpdate}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="form-label">Client Name *</label>
+                  <input name="name" type="text" className="form-input" placeholder="Enter client name" required defaultValue={editingClient.name} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">PAN</label>
+                    <input name="pan" type="text" className="form-input" placeholder="PAN" defaultValue={editingClient.pan || ''} />
+                  </div>
+                  <div>
+                    <label className="form-label">GSTIN</label>
+                    <input name="gstin" type="text" className="form-input" placeholder="GSTIN" defaultValue={editingClient.gstins ? JSON.parse(editingClient.gstins)[0] || '' : ''} />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">Client Type</label>
+                  <select name="type" className="form-input" defaultValue={editingClient.type || ''}>
+                    <option value="">Select type</option>
+                    <option value="private_limited">Private Limited</option>
+                    <option value="public_limited">Public Limited</option>
+                    <option value="llp">LLP</option>
+                    <option value="partnership">Partnership</option>
+                    <option value="proprietorship">Proprietorship</option>
+                    <option value="section_8">Section 8 Company</option>
+                    <option value="society">Society</option>
+                    <option value="trust">Trust</option>
+                    <option value="cooperative">Cooperative</option>
+                    <option value="ngo">NGO</option>
+                    <option value="government">Government</option>
+                    <option value="other">Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Email</label>
+                  <input name="email" type="email" className="form-input" placeholder="client@email.com" defaultValue={editingClient.contactInfo ? JSON.parse(editingClient.contactInfo).email || '' : ''} />
+                </div>
+                <div>
+                  <label className="form-label">Phone</label>
+                  <input name="phone" type="tel" className="form-input" placeholder="+91 98765 43210" defaultValue={editingClient.contactInfo ? JSON.parse(editingClient.contactInfo).phone || '' : ''} />
+                </div>
+                <div>
+                  <label className="form-label">Address</label>
+                  <textarea name="address" className="form-input" rows={2} placeholder="Address" defaultValue={editingClient.contactInfo ? JSON.parse(editingClient.contactInfo).address || '' : ''}></textarea>
+                </div>
+                <div>
+                  <label className="form-label">Status</label>
+                  <select name="status" className="form-input" defaultValue={editingClient.status || 'active'}>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                  </select>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" disabled={submitting} className="btn-primary flex-1 disabled:opacity-50">{submitting ? 'Saving...' : 'Update Client'}</button>
+                  <button type="button" onClick={() => { setShowEditModal(false); setEditingClient(null) }} className="btn-secondary flex-1">Cancel</button>
                 </div>
               </div>
             </form>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Building2, Mail, Lock, Eye, EyeOff, Shield, AlertCircle } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, Shield, AlertCircle } from 'lucide-react'
 import { apiFetch } from '../lib/api'
 
 export default function Login({ onLogin }: { onLogin: () => void }) {
@@ -43,9 +43,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       <div className="relative z-10 w-full max-w-md px-6">
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-emerald-500/30">
-              <Building2 className="text-white" size={28} />
-            </div>
+            <img src="/logo.jpeg" alt="PraxisCA Logo" className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 shadow-lg shadow-emerald-500/30" />
             <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">PraxisCA</h1>
             <p className="text-slate-300 text-sm">Practice Management for CA Firms</p>
           </div>

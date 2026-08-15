@@ -17,7 +17,6 @@ import {
   X,
   Bell,
   ChevronDown,
-  Building2,
 } from 'lucide-react'
 
 const navItems = [
@@ -97,9 +96,7 @@ export default function Layout() {
       >
         <div className="flex items-center justify-between p-4 border-b border-slate-700">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-emerald-500 to-blue-600 rounded-lg flex items-center justify-center">
-              <Building2 className="text-white" size={18} />
-            </div>
+            <img src="/logo.jpeg" alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
             <div>
               <span className="font-bold text-sm block leading-tight">PraxisCA</span>
               <span className="text-[10px] text-slate-400 uppercase tracking-wider">Practice CRM</span>
@@ -155,6 +152,7 @@ export default function Layout() {
           <button className="lg:hidden" onClick={() => setSidebarOpen(true)}>
             <Menu size={20} />
           </button>
+          <img src="/logo.jpeg" alt="Logo" className="w-8 h-8 rounded-lg object-cover hidden sm:block" />
           <h1 className="text-lg font-semibold text-gray-800 capitalize">
             {location.pathname === '/' ? 'Dashboard' : location.pathname.slice(1).replace(/-/g, ' ')}
           </h1>
