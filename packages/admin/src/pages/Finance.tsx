@@ -36,6 +36,26 @@ export default function Finance() {
     setShowViewModal(true)
   }
 
+  const printInvoice = (inv: any) => {
+    const w = window.open('', '_blank', 'width=800,height=600')
+    if (!w) return
+    const rows = (inv.lineItems && inv.lineItems.length ? inv.lineItems : []).map((li: any) =>
+      `<tr><td style="padding:6px;border:1px solid #ddd">${li.description}</td><td style="padding:6px;border:1px solid #ddd">${li.quantity}</td><td style="padding:6px;border:1px solid #ddd">₹${Number(li.amount || 0).toLocaleString('en-IN')}</td></tr>`,
+    ).join('')
+    w.document.write(`<html><head><title>Invoice ${inv.invoiceNumber}</title></head><body style="font-family:sans-serif;padding:32px">
+      <h2>StartUp Go Ventures CRM</h2>
+      <h3>Invoice ${inv.invoiceNumber}</h3>
+      <p><strong>Client:</strong> ${inv.client?.name || '-'}</p>
+      <p><strong>Status:</strong> ${inv.status}</p>
+      <p><strong>Issue Date:</strong> ${inv.issueDate ? new Date(inv.issueDate).toLocaleDateString('en-IN') : '-'}</p>
+      <p><strong>Due Date:</strong> ${inv.dueDate ? new Date(inv.dueDate).toLocaleDateString('en-IN') : '-'}</p>
+      <table style="width:100%;border-collapse:collapse;margin-top:16px"><thead><tr style="background:#f5f5f5"><th style="padding:6px;border:1px solid #ddd;text-align:left">Description</th><th style="padding:6px;border:1px solid #ddd">Qty</th><th style="padding:6px;border:1px solid #ddd">Amount</th></tr></thead><tbody>${rows}</tbody></table>
+      <h3 style="margin-top:16px">Total: ₹${Number(inv.total || 0).toLocaleString('en-IN')}</h3>
+      <script>window.onload=function(){window.print()}</script>
+    </body></html>`)
+    w.document.close()
+  }
+
   const handleCreateInvoice = async (e: React.FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
@@ -488,7 +508,7 @@ export default function Finance() {
         )}
       </div>
 
-      {showViewModal && selectedInvoice && (
+       {showViewModal && selectedInvoice && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg">
             <div className="flex items-center justify-between p-6 border-b border-gray-100">
@@ -504,8 +524,24 @@ export default function Finance() {
                 <div><p className="text-xs text-gray-500">Issue Date</p><p className="text-sm font-medium text-gray-900">{selectedInvoice.issueDate ? new Date(selectedInvoice.issueDate).toLocaleDateString() : '-'}</p></div>
                 <div><p className="text-xs text-gray-500">Due Date</p><p className="text-sm font-medium text-gray-900">{selectedInvoice.dueDate ? new Date(selectedInvoice.dueDate).toLocaleDateString() : '-'}</p></div>
               </div>
+              {selectedInvoice.lineItems && selectedInvoice.lineItems.length > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500 mb-2 uppercase tracking-wider">Line Items</p>
+                  <table className="w-full text-sm">
+                    <thead><tr className="border-b border-gray-100 text-left text-xs text-gray-500"><th className="py-1">Description</th><th className="py-1">Qty</th><th className="py-1">Amount</th></tr></thead>
+                    <tbody>
+                      {selectedInvoice.lineItems.map((li: any, i: number) => (
+                        <tr key={i} className="border-b border-gray-50">
+                          <td className="py-1">{li.description}</td><td className="py-1">{li.quantity}</td><td className="py-1">₹{li.amount?.toLocaleString('en-IN')}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-            <div className="p-6 border-t border-gray-100 flex justify-end">
+            <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
+              <button onClick={() => { setShowViewModal(false); printInvoice(selectedInvoice) }} className="btn-primary">Download / Print</button>
               <button onClick={() => setShowViewModal(false)} className="btn-secondary">Close</button>
             </div>
           </div>

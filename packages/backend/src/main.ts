@@ -22,6 +22,8 @@ import { ClientsModule } from './clients/clients.module'
 import { FinanceModule } from './finance/finance.module'
 import { EmployeesModule } from './employees/employees.module'
 import { TodosModule } from './todos/todos.module'
+import { EventsModule } from './events/events.module'
+import { TemplatesModule } from './templates/templates.module'
 
 @Module({
   imports: [
@@ -45,6 +47,8 @@ import { TodosModule } from './todos/todos.module'
     FinanceModule,
     EmployeesModule,
     TodosModule,
+    EventsModule,
+    TemplatesModule,
   ],
   providers: [PrismaService],
 })

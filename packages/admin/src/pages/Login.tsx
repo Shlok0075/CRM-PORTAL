@@ -22,8 +22,10 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       })
       if (rememberMe) {
         localStorage.setItem('token', data.accessToken)
+        localStorage.setItem('role', data.role || 'member')
       } else {
         sessionStorage.setItem('token', data.accessToken)
+        sessionStorage.setItem('role', data.role || 'member')
       }
       onLogin()
     } catch (err: any) {
@@ -43,8 +45,8 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
       <div className="relative z-10 w-full max-w-md px-6">
         <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-8 shadow-2xl">
           <div className="text-center mb-8">
-            <img src="/logo.jpeg" alt="PraxisCA Logo" className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 shadow-lg shadow-emerald-500/30" />
-            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">PraxisCA</h1>
+            <img src="/logo.jpeg" alt="StartUp Go Ventures CRM Logo" className="w-16 h-16 rounded-2xl object-cover mx-auto mb-4 shadow-lg shadow-emerald-500/30" />
+            <h1 className="text-3xl font-bold text-white mb-2 tracking-tight">StartUp Go Ventures CRM</h1>
             <p className="text-slate-300 text-sm">Practice Management for CA Firms</p>
           </div>
 
@@ -112,7 +114,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
           </div>
         </div>
 
-        <p className="text-center text-slate-500/60 text-xs mt-6">PraxisCA v1.0 — Built for Indian CA Firms</p>
+        <p className="text-center text-slate-500/60 text-xs mt-6">StartUp Go Ventures CRM v1.0</p>
       </div>
     </div>
   )

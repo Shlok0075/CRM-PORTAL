@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Dashboard from './pages/Dashboard'
 import Clients from './pages/Clients'
 import Tasks from './pages/Tasks'
+import Events from './pages/Events'
 import Documents from './pages/Documents'
 import Finance from './pages/Finance'
 import Retainers from './pages/Retainers'
@@ -11,6 +12,7 @@ import Todos from './pages/Todos'
 import Communication from './pages/Communication'
 import Reports from './pages/Reports'
 import Settings from './pages/Settings'
+import Templates from './pages/Templates'
 import Login from './pages/Login'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -34,6 +36,7 @@ export default function App() {
           <Route index element={<Dashboard />} />
           <Route path="clients" element={<Clients />} />
           <Route path="tasks" element={<Tasks />} />
+          <Route path="events" element={<Events />} />
           <Route path="documents" element={<Documents />} />
           <Route path="finance" element={<Finance />} />
           <Route path="retainers" element={<Retainers />} />
@@ -42,6 +45,7 @@ export default function App() {
           <Route path="communication" element={<Communication />} />
           <Route path="reports" element={<Reports />} />
           <Route path="settings" element={<Settings />} />
+          <Route path="templates" element={<Templates />} />
         </Route>
       </Routes>
     </BrowserRouter>

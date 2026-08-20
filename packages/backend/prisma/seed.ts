@@ -42,7 +42,7 @@ async function main() {
       email: 'admin@ca-firm.local',
       name: 'CA Admin',
       passwordHash: hash,
-      role: { connect: { id: role.id } },
+      role: 'admin',
       isActive: true,
     },
   })

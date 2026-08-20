@@ -85,6 +85,7 @@ export class TasksController {
       search,
       page,
       limit,
+      userId: req.user?.role === 'member' ? req.user?.sub : undefined,
     })
   }
 

@@ -11,7 +11,7 @@ export class EmployeesService {
   async findAll(orgId: string) {
     return this.prisma.user.findMany({
       where: { orgId },
-      select: { id: true, email: true, name: true, phone: true, designation: true, isActive: true, role: { select: { name: true } }, createdAt: true },
+      select: { id: true, email: true, name: true, phone: true, designation: true, isActive: true, role: true, createdAt: true },
       orderBy: { createdAt: 'desc' },
     })
   }
@@ -19,7 +19,7 @@ export class EmployeesService {
   async findOne(orgId: string, id: string) {
     return this.prisma.user.findFirst({
       where: { id, orgId },
-      select: { id: true, email: true, name: true, phone: true, designation: true, isActive: true, role: { select: { name: true } }, createdAt: true },
+      select: { id: true, email: true, name: true, phone: true, designation: true, isActive: true, role: true, createdAt: true },
     })
   }
 
@@ -27,8 +27,8 @@ export class EmployeesService {
     const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined)) as any
     const hash = await bcrypt.hash(cleaned.password, 10)
     return this.prisma.user.create({
-      data: { org: { connect: { id: orgId } }, email: cleaned.email, name: cleaned.name, passwordHash: hash, phone: cleaned.phone, designation: cleaned.designation, isActive: true },
-      select: { id: true, email: true, name: true, phone: true, designation: true, isActive: true, createdAt: true },
+      data: { org: { connect: { id: orgId } }, email: cleaned.email, name: cleaned.name, passwordHash: hash, phone: cleaned.phone, designation: cleaned.designation, role: cleaned.role || 'member', isActive: true },
+      select: { id: true, email: true, name: true, phone: true, designation: true, role: true, isActive: true, createdAt: true },
     })
   }
 

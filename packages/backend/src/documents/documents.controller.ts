@@ -22,6 +22,13 @@ export class DocumentsController {
   }
 
   @UseGuards(JwtGuard)
+  @Get('by-event/:eventId')
+  async listByEvent(@Req() req: any, @Param('eventId') eventId: string) {
+    const orgId = req.user?.orgId
+    return this.svc.listByEvent(orgId, eventId)
+  }
+
+  @UseGuards(JwtGuard)
   @Get('by-task/:taskId')
   async listByTask(@Req() req: any, @Param('taskId') taskId: string) {
     const orgId = req.user?.orgId

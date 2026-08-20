@@ -256,6 +256,7 @@ export class TasksService {
     if (filters.status) where.status = filters.status
     if (filters.serviceType) where.serviceType = filters.serviceType
     if (filters.assignee) where.assigneeIds = filters.assignee
+    if (filters.userId) where.assigneeIds = { contains: filters.userId }
 
     if (filters.client) {
       if (Array.isArray(filters.client)) where.clientId = { in: filters.client }

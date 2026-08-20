@@ -34,6 +34,14 @@ export class DocumentsService {
     })
   }
 
+  async listByEvent(orgId: string, eventId: string) {
+    return this.prisma.document.findMany({
+      where: { orgId, eventId },
+      orderBy: { createdAt: 'desc' },
+      include: { event: { select: { title: true } } },
+    })
+  }
+
   async listByTask(orgId: string, taskId: string) {
     return this.prisma.document.findMany({
       where: { orgId, taskId },

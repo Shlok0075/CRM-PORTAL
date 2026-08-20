@@ -17,20 +17,24 @@ import {
   X,
   Bell,
   ChevronDown,
+  Calendar,
+  FileText,
 } from 'lucide-react'
 
 const navItems = [
-  { to: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'core' },
-  { to: '/clients', icon: Users, label: 'Clients', section: 'core' },
-  { to: '/tasks', icon: CheckSquare, label: 'Tasks', section: 'core' },
-  { to: '/documents', icon: FolderOpen, label: 'Documents', section: 'core' },
-  { to: '/finance', icon: DollarSign, label: 'Finance', section: 'billing' },
-  { to: '/retainers', icon: Package, label: 'Retainers', section: 'billing' },
-  { to: '/employees', icon: UserCog, label: 'Employees', section: 'team' },
-  { to: '/todos', icon: CheckCircle2, label: 'To-Dos', section: 'team' },
-  { to: '/communication', icon: MessageSquare, label: 'Communication', section: 'outreach' },
-  { to: '/reports', icon: BarChart3, label: 'Reports', section: 'insights' },
-  { to: '/settings', icon: Settings, label: 'Settings', section: 'admin' },
+  { to: '/', icon: LayoutDashboard, label: 'Dashboard', section: 'core', roles: ['admin', 'member'] },
+  { to: '/clients', icon: Users, label: 'Clients', section: 'core', roles: ['admin'] },
+  { to: '/tasks', icon: CheckSquare, label: 'My Tasks', section: 'core', roles: ['admin', 'member'] },
+  { to: '/events', icon: Calendar, label: 'My Events', section: 'core', roles: ['admin', 'member'] },
+  { to: '/documents', icon: FolderOpen, label: 'Documents', section: 'core', roles: ['admin', 'member'] },
+  { to: '/finance', icon: DollarSign, label: 'Finance', section: 'billing', roles: ['admin'] },
+  { to: '/retainers', icon: Package, label: 'Retainers', section: 'billing', roles: ['admin'] },
+  { to: '/employees', icon: UserCog, label: 'Team', section: 'team', roles: ['admin'] },
+  { to: '/todos', icon: CheckCircle2, label: 'To-Dos', section: 'team', roles: ['admin', 'member'] },
+  { to: '/communication', icon: MessageSquare, label: 'Communication', section: 'outreach', roles: ['admin'] },
+  { to: '/reports', icon: BarChart3, label: 'Reports', section: 'insights', roles: ['admin'] },
+  { to: '/settings', icon: Settings, label: 'Settings', section: 'admin', roles: ['admin'] },
+  { to: '/templates', icon: FileText, label: 'Agreements', section: 'admin', roles: ['admin'] },
 ]
 
 import { apiFetch } from '../lib/api'
@@ -39,6 +43,7 @@ export default function Layout() {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const [user, setUser] = useState<any>(null)
   const [showNotifications, setShowNotifications] = useState(false)
+  const role = (localStorage.getItem('role') || sessionStorage.getItem('role') || 'admin') as string
   const location = useLocation()
   const navigate = useNavigate()
 
@@ -56,6 +61,9 @@ export default function Layout() {
 
   const handleLogout = () => {
     localStorage.removeItem('token')
+    localStorage.removeItem('role')
+    sessionStorage.removeItem('token')
+    sessionStorage.removeItem('role')
     navigate('/login')
   }
 
@@ -71,11 +79,13 @@ export default function Layout() {
     return titles[section]
   }
 
-  const groupedNav = navItems.reduce((acc, item) => {
-    if (!acc[item.section]) acc[item.section] = []
-    acc[item.section].push(item)
-    return acc
-  }, {} as Record<string, typeof navItems>)
+  const groupedNav = navItems
+    .filter((item) => item.roles.includes(role))
+    .reduce((acc, item) => {
+      if (!acc[item.section]) acc[item.section] = []
+      acc[item.section].push(item)
+      return acc
+    }, {} as Record<string, typeof navItems>)
 
   return (
     <div className="flex h-screen bg-slate-50">
@@ -98,7 +108,7 @@ export default function Layout() {
           <div className="flex items-center gap-2">
             <img src="/logo.jpeg" alt="Logo" className="w-8 h-8 rounded-lg object-cover" />
             <div>
-              <span className="font-bold text-sm block leading-tight">PraxisCA</span>
+              <span className="font-bold text-sm block leading-tight">StartUp Go Ventures CRM</span>
               <span className="text-[10px] text-slate-400 uppercase tracking-wider">Practice CRM</span>
             </div>
           </div>
