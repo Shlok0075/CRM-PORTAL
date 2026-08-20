@@ -98,7 +98,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           console.error('[DB] ensureSeed: seed failed (continuing):', err?.stderr || err?.message || err)
         }
       } else {
-        console.log('[DB] ensureSeed: admin user exists, skipping seed')
+        // Ensure the seeded admin always has the admin role (the column default is 'member')
+        await this.user.update({ where: { email: 'admin@ca-firm.local' }, data: { role: 'admin' } }).catch(() => {})
+        console.log('[DB] ensureSeed: admin user exists, ensured admin role')
       }
     } catch (err) {
       console.error('[DB] ensureSeed: failed', err)
