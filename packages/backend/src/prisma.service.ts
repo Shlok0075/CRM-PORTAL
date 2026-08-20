@@ -16,37 +16,72 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       await this.$queryRaw`SELECT 1`
       console.log('[DB] ensureDatabase: connection OK')
     } catch (err) {
-      console.error('[DB] ensureDatabase: connection failed, will attempt db push', err)
+      console.error('[DB] ensureDatabase: connection failed', err)
+      return
     }
 
-    try {
-      const tables = await this.$queryRaw<any[]>`
-        SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'
-      `
-      const tableNames = tables.map(t => t.table_name)
-      console.log('[DB] ensureDatabase: existing tables:', tableNames)
-
-      if (!tableNames.includes('User')) {
-        console.log('[DB] ensureDatabase: User table missing, running db push')
-        const { execSync } = await import('child_process')
-        try {
-          const out = execSync('npx prisma db push --skip-generate', { encoding: 'utf8', cwd: process.cwd(), timeout: 120000 })
-          console.log('[DB] ensureDatabase: db push output:', out)
-        } catch (err: any) {
-          console.error('[DB] ensureDatabase: db push failed (continuing):', err?.stderr || err?.message || err)
-        }
-      } else {
-        console.log('[DB] ensureDatabase: tables already exist, skipping db push')
-      }
-    } catch (err) {
-      console.error('[DB] ensureDatabase: cannot list tables, attempting db push', err)
+    const run = async (sql: string, label: string) => {
       try {
-        const { execSync } = await import('child_process')
-        execSync('npx prisma db push --skip-generate --accept-data-loss', { encoding: 'utf8', cwd: process.cwd(), timeout: 180000 })
-      } catch (e: any) {
-        console.error('[DB] ensureDatabase: db push failed (continuing)', e?.stderr || e?.message || e)
+        await this.$executeRawUnsafe(sql)
+        console.log('[DB] ensureDatabase: applied ->', label)
+      } catch (err: any) {
+        console.error('[DB] ensureDatabase: failed ->', label, err?.message || err)
       }
     }
+
+    // Idempotent schema deltas (no shadow DB / migrations required)
+    await run(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "role" TEXT NOT NULL DEFAULT 'member';`, 'User.role column')
+
+    await run(
+      `CREATE TABLE IF NOT EXISTS "Document" ("id" TEXT NOT NULL, "orgId" TEXT NOT NULL, "clientId" TEXT, "taskId" TEXT, "eventId" TEXT, "taskDocumentRequestId" TEXT, "category" TEXT NOT NULL, "fileUrl" TEXT NOT NULL, "fileName" TEXT, "fileType" TEXT, "fileSize" INTEGER, "version" INTEGER NOT NULL DEFAULT 1, "uploadedBy" TEXT, "uploadedByType" TEXT, "isPublic" BOOLEAN NOT NULL DEFAULT false, "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT "Document_pkey" PRIMARY KEY ("id"));`,
+      'Document table ensure',
+    )
+    await run(`ALTER TABLE "Document" ADD COLUMN IF NOT EXISTS "eventId" TEXT;`, 'Document.eventId column')
+
+    await run(
+      `CREATE TABLE IF NOT EXISTS "Event" (
+        "id" TEXT NOT NULL,
+        "orgId" TEXT NOT NULL,
+        "title" TEXT NOT NULL,
+        "description" TEXT,
+        "clientId" TEXT,
+        "assigneeIds" TEXT NOT NULL DEFAULT '[]',
+        "status" TEXT NOT NULL DEFAULT 'pending',
+        "priority" TEXT NOT NULL DEFAULT 'medium',
+        "startDate" TIMESTAMP(3),
+        "dueDate" TIMESTAMP(3),
+        "expectedDate" TIMESTAMP(3),
+        "createdById" TEXT,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "Event_pkey" PRIMARY KEY ("id")
+      );`,
+      'Event table',
+    )
+    await run(`CREATE INDEX IF NOT EXISTS "Event_orgId_idx" ON "Event"("orgId");`, 'Event orgId index')
+    await run(`CREATE INDEX IF NOT EXISTS "Event_clientId_idx" ON "Event"("clientId");`, 'Event clientId index')
+    await run(`CREATE INDEX IF NOT EXISTS "Event_createdById_idx" ON "Event"("createdById");`, 'Event createdById index')
+    await run(`ALTER TABLE "Event" ADD CONSTRAINT "Event_org_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;`, 'Event org FK')
+    await run(`ALTER TABLE "Event" ADD CONSTRAINT "Event_client_fkey" FOREIGN KEY ("clientId") REFERENCES "Client"("id") ON DELETE SET NULL ON UPDATE CASCADE;`, 'Event client FK')
+    await run(`ALTER TABLE "Event" ADD CONSTRAINT "Event_createdBy_fkey" FOREIGN KEY ("createdById") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;`, 'Event createdBy FK')
+
+    await run(
+      `CREATE TABLE IF NOT EXISTS "AgreementTemplate" (
+        "id" TEXT NOT NULL,
+        "orgId" TEXT NOT NULL,
+        "name" TEXT NOT NULL,
+        "type" TEXT NOT NULL,
+        "body" TEXT NOT NULL,
+        "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        "updatedAt" TIMESTAMP(3) NOT NULL,
+        CONSTRAINT "AgreementTemplate_pkey" PRIMARY KEY ("id")
+      );`,
+      'AgreementTemplate table',
+    )
+    await run(`CREATE INDEX IF NOT EXISTS "AgreementTemplate_orgId_idx" ON "AgreementTemplate"("orgId");`, 'AgreementTemplate orgId index')
+    await run(`ALTER TABLE "AgreementTemplate" ADD CONSTRAINT "AgreementTemplate_org_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;`, 'AgreementTemplate org FK')
+
+    console.log('[DB] ensureDatabase: schema sync complete')
   }
 
   async ensureSeed() {
@@ -67,7 +102,6 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       }
     } catch (err) {
       console.error('[DB] ensureSeed: failed', err)
-      throw err
     }
   }
 }
