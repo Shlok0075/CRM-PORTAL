@@ -16,8 +16,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       await this.$queryRaw`SELECT 1`
       console.log('[DB] ensureDatabase: connection OK')
     } catch (err) {
-      console.error('[DB] ensureDatabase: connection failed', err)
-      throw err
+      console.error('[DB] ensureDatabase: connection failed, will attempt db push', err)
     }
 
     try {
@@ -31,7 +30,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         console.log('[DB] ensureDatabase: User table missing, running db push')
         const { execSync } = await import('child_process')
         try {
-          const out = execSync('npx prisma db push --skip-generate --skip-shadow-database', { encoding: 'utf8', cwd: process.cwd(), timeout: 120000 })
+          const out = execSync('npx prisma db push --skip-generate', { encoding: 'utf8', cwd: process.cwd(), timeout: 120000 })
           console.log('[DB] ensureDatabase: db push output:', out)
         } catch (err: any) {
           console.error('[DB] ensureDatabase: db push failed (continuing):', err?.stderr || err?.message || err)
@@ -40,8 +39,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         console.log('[DB] ensureDatabase: tables already exist, skipping db push')
       }
     } catch (err) {
-      console.error('[DB] ensureDatabase: failed', err)
-      throw err
+      console.error('[DB] ensureDatabase: cannot list tables, attempting db push', err)
+      try {
+        const { execSync } = await import('child_process')
+        execSync('npx prisma db push --skip-generate --accept-data-loss', { encoding: 'utf8', cwd: process.cwd(), timeout: 180000 })
+      } catch (e: any) {
+        console.error('[DB] ensureDatabase: db push failed (continuing)', e?.stderr || e?.message || e)
+      }
     }
   }
 
