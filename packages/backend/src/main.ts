@@ -58,8 +58,18 @@ async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   app.setGlobalPrefix('api')
 
-  const allowedOrigins = process.env.CORS_ORIGIN?.split(',').map(o => o.trim()) || ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000']
-  app.enableCors({ origin: allowedOrigins, credentials: true })
+  const configuredOrigins = (process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()) || []).filter(Boolean)
+  const localOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000']
+  app.enableCors({
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true)
+      if (configuredOrigins.includes(origin)) return callback(null, true)
+      if (localOrigins.includes(origin)) return callback(null, true)
+      if (origin.endsWith('.vercel.app')) return callback(null, true)
+      return callback(null, false)
+    },
+    credentials: true,
+  })
 
   app.use(express.json())
   app.use(express.urlencoded({ extended: true }))
