@@ -31,7 +31,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         console.log('[DB] ensureDatabase: User table missing, running db push')
         const { execSync } = await import('child_process')
         try {
-          const out = execSync('npx prisma db push --skip-generate', { encoding: 'utf8', cwd: process.cwd(), timeout: 120000 })
+          const out = execSync('npx prisma db push --skip-generate --skip-shadow-database', { encoding: 'utf8', cwd: process.cwd(), timeout: 120000 })
           console.log('[DB] ensureDatabase: db push output:', out)
         } catch (err: any) {
           console.error('[DB] ensureDatabase: db push failed (continuing):', err?.stderr || err?.message || err)
