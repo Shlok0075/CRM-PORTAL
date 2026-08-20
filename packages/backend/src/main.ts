@@ -69,8 +69,7 @@ async function bootstrap() {
     await (prisma as any).ensureDatabase()
     await (prisma as any).ensureSeed()
   } catch (err) {
-    console.error('[STARTUP] DB init failed, cannot continue:', err)
-    process.exit(1)
+    console.error('[STARTUP] DB init failed (continuing to serve API):', err)
   }
 
   await app.listen(process.env.PORT || 4000)

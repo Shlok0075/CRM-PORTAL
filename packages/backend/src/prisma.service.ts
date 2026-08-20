@@ -31,11 +31,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         console.log('[DB] ensureDatabase: User table missing, running db push')
         const { execSync } = await import('child_process')
         try {
-          const out = execSync('npx prisma db push', { encoding: 'utf8', cwd: process.cwd() })
+          const out = execSync('npx prisma db push --skip-generate', { encoding: 'utf8', cwd: process.cwd(), timeout: 120000 })
           console.log('[DB] ensureDatabase: db push output:', out)
         } catch (err: any) {
-          console.error('[DB] ensureDatabase: db push failed:', err?.stderr || err?.message || err)
-          throw err
+          console.error('[DB] ensureDatabase: db push failed (continuing):', err?.stderr || err?.message || err)
         }
       } else {
         console.log('[DB] ensureDatabase: tables already exist, skipping db push')
@@ -54,11 +53,10 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
         console.log('[DB] ensureSeed: admin user missing, running seed')
         const { execSync } = await import('child_process')
         try {
-          const out = execSync('npx ts-node --transpile-only prisma/seed.ts', { encoding: 'utf8', cwd: process.cwd() })
+          const out = execSync('npx ts-node --transpile-only prisma/seed.ts', { encoding: 'utf8', cwd: process.cwd(), timeout: 120000 })
           console.log('[DB] ensureSeed: output:', out)
         } catch (err: any) {
-          console.error('[DB] ensureSeed: seed failed:', err?.stderr || err?.message || err)
-          throw err
+          console.error('[DB] ensureSeed: seed failed (continuing):', err?.stderr || err?.message || err)
         }
       } else {
         console.log('[DB] ensureSeed: admin user exists, skipping seed')

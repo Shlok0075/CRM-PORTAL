@@ -26,8 +26,8 @@
    - **Plan:** Free
    - **Root Directory:** `packages/backend`
    - **Runtime:** Node
-   - **Build Command:** `pnpm install && pnpm run build && pnpm run prisma:generate`
-   - **Start Command:** `pnpm run start`
+    - **Build Command:** `pnpm install && npx prisma generate && pnpm run build`
+    - **Start Command:** `npx prisma db push && pnpm run start`
    - **Plan:** Free
 
 ## Step 3: Set Environment Variables
