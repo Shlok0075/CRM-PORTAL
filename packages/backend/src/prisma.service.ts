@@ -101,9 +101,30 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
           console.error('[DB] ensureSeed: seed failed (continuing):', err?.stderr || err?.message || err)
         }
       } else {
-        // Ensure the seeded admin always has the admin role (the column default is 'member')
         await this.user.update({ where: { email: 'admin@ca-firm.local' }, data: { role: 'admin' } }).catch(() => {})
         console.log('[DB] ensureSeed: admin user exists, ensured admin role')
+      }
+
+      const employee = await this.user.findFirst({ where: { email: 'employee@ca-firm.local' }, select: { id: true } })
+      if (!employee) {
+        console.log('[DB] ensureSeed: employee user missing, creating')
+        const { hash } = await import('bcryptjs')
+        const employeeHash = await hash('employeepass', 10)
+        await this.user.create({
+          data: {
+            org: { connect: { id: admin?.orgId || (await this.organization.findFirst())!.id } },
+            email: 'employee@ca-firm.local',
+            name: 'Rahul Sharma',
+            passwordHash: employeeHash,
+            role: 'member',
+            designation: 'Senior Accountant',
+            phone: '+919876543210',
+            isActive: true,
+          },
+        }).catch((err: any) => console.error('[DB] ensureSeed: employee creation failed:', err?.message || err))
+        console.log('[DB] ensureSeed: employee user created')
+      } else {
+        console.log('[DB] ensureSeed: employee user exists')
       }
     } catch (err) {
       console.error('[DB] ensureSeed: failed', err)

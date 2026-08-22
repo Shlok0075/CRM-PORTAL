@@ -218,6 +218,19 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
               <Shield size={14} className="text-emerald-400" />
               <p className="text-xs text-slate-300 text-center">Secure Practice Management</p>
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="bg-white/5 rounded-lg p-2 text-center border border-white/10">
+                <p className="text-xs font-medium text-white">Admin</p>
+                <p className="text-[10px] text-slate-400">admin@ca-firm.local</p>
+                <p className="text-[10px] text-slate-500">password: adminpass</p>
+              </div>
+              <div className="bg-white/5 rounded-lg p-2 text-center border border-white/10">
+                <p className="text-xs font-medium text-white">Employee</p>
+                <p className="text-[10px] text-slate-400">employee@ca-firm.local</p>
+                <p className="text-[10px] text-slate-500">password: employeepass</p>
+              </div>
+            </div>
+          </div>
           </div>
         </div>
 

@@ -47,6 +47,20 @@ async function main() {
     },
   })
 
+  const employeeHash = await bcrypt.hash('employeepass', 10)
+  const employee = await prisma.user.create({
+    data: {
+      org: { connect: { id: org.id } },
+      email: 'employee@ca-firm.local',
+      name: 'Rahul Sharma',
+      passwordHash: employeeHash,
+      role: 'member',
+      designation: 'Senior Accountant',
+      phone: '+919876543210',
+      isActive: true,
+    },
+  })
+
   const client1 = await prisma.client.create({
     data: {
       org: { connect: { id: org.id } },
