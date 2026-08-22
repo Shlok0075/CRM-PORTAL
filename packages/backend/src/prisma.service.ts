@@ -90,7 +90,7 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
   async ensureSeed() {
     console.log('[DB] ensureSeed: starting')
     try {
-      const admin = await this.user.findFirst({ where: { email: 'admin@ca-firm.local' }, select: { id: true } })
+      const admin = await this.user.findFirst({ where: { email: 'admin@ca-firm.local' }, select: { id: true, orgId: true } })
       if (!admin) {
         console.log('[DB] ensureSeed: admin user missing, running seed')
         const { execSync } = await import('child_process')
