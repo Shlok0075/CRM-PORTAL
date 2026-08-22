@@ -6,49 +6,56 @@ export class InvoicesService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, dto: any) {
-    const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined)) as any
-    let lineItems = cleaned.lineItems || []
-    if (typeof lineItems === 'string') {
-      try { lineItems = JSON.parse(lineItems) } catch { lineItems = [] }
+    if (!orgId) throw new BadRequestException('Missing orgId')
+    try {
+      const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined)) as any
+      let lineItems = cleaned.lineItems || []
+      if (typeof lineItems === 'string') {
+        try { lineItems = JSON.parse(lineItems) } catch { lineItems = [] }
+      }
+      const subtotal = this.calculateSubtotal(lineItems)
+      const { cgst, sgst, igst } = this.calculateGst(subtotal, cleaned.placeOfSupply)
+      const total = subtotal + cgst + sgst + igst
+
+      const itemsWithHsn = lineItems.map((item: any) => ({
+        ...item,
+        hsnSac: item.hsnSac || cleaned.hsnSac,
+      }))
+
+      const invoiceNumber = await this.generateInvoiceNumber(orgId)
+      return this.prisma.invoice.create({
+        data: {
+          org: { connect: { id: orgId } },
+          clientId: cleaned.clientId,
+          billingProfileId: cleaned.billingProfileId,
+          invoiceNumber,
+          lineItems: JSON.stringify(itemsWithHsn),
+          subtotal,
+          cgst,
+          sgst,
+          igst,
+          total,
+          status: 'draft',
+          issueDate: cleaned.issueDate ? new Date(cleaned.issueDate) : undefined,
+          dueDate: cleaned.dueDate ? new Date(cleaned.dueDate) : undefined,
+          hsnSac: cleaned.hsnSac,
+          placeOfSupply: cleaned.placeOfSupply,
+          lineItemsList: {
+            create: itemsWithHsn.map((item: any) => ({
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              amount: item.amount,
+              hsnSac: item.hsnSac,
+            })),
+          },
+        } as any,
+        include: { lineItemsList: true, client: true, billingProfile: true },
+      })
+    } catch (err) {
+      console.error('[INVOICES] create failed:', err)
+      throw err
     }
-    const subtotal = this.calculateSubtotal(lineItems)
-    const { cgst, sgst, igst } = this.calculateGst(subtotal, cleaned.placeOfSupply)
-    const total = subtotal + cgst + sgst + igst
-
-    const itemsWithHsn = lineItems.map((item: any) => ({
-      ...item,
-      hsnSac: item.hsnSac || cleaned.hsnSac,
-    }))
-
-    return this.prisma.invoice.create({
-      data: {
-        org: { connect: { id: orgId } },
-        clientId: cleaned.clientId,
-        billingProfileId: cleaned.billingProfileId,
-        invoiceNumber: await this.generateInvoiceNumber(orgId),
-        lineItems: JSON.stringify(itemsWithHsn),
-        subtotal,
-        cgst,
-        sgst,
-        igst,
-        total,
-        status: 'draft',
-        issueDate: cleaned.issueDate ? new Date(cleaned.issueDate) : undefined,
-        dueDate: cleaned.dueDate ? new Date(cleaned.dueDate) : undefined,
-        hsnSac: cleaned.hsnSac,
-        placeOfSupply: cleaned.placeOfSupply,
-        lineItemsList: {
-          create: itemsWithHsn.map((item: any) => ({
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            amount: item.amount,
-            hsnSac: item.hsnSac,
-          })),
-        },
-      } as any,
-      include: { lineItemsList: true, client: true, billingProfile: true },
-    })
   }
 
   async findAll(orgId: string, query: any) {
@@ -401,17 +408,22 @@ ${invoiceXml}
   }
 
   private async generateInvoiceNumber(orgId: string): Promise<string> {
-    const year = new Date().getFullYear()
-    const prefix = `INV-${year}-`
-    const last = await this.prisma.invoice.findFirst({
-      where: { orgId, invoiceNumber: { startsWith: prefix } },
-      orderBy: { invoiceNumber: 'desc' },
-    })
-    let seq = 1
-    if (last) {
-      const parts = last.invoiceNumber.split('-')
-      seq = parseInt(parts[parts.length - 1], 10) + 1
+    try {
+      const year = new Date().getFullYear()
+      const prefix = `INV-${year}-`
+      const last = await this.prisma.invoice.findFirst({
+        where: { orgId, invoiceNumber: { startsWith: prefix } },
+        orderBy: { invoiceNumber: 'desc' },
+      })
+      let seq = 1
+      if (last) {
+        const parts = last.invoiceNumber.split('-')
+        seq = parseInt(parts[parts.length - 1], 10) + 1
+      }
+      return `${prefix}${String(seq).padStart(4, '0')}`
+    } catch (err) {
+      console.error('[INVOICES] generateInvoiceNumber failed:', err)
+      throw err
     }
-    return `${prefix}${String(seq).padStart(4, '0')}`
   }
 }
