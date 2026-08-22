@@ -69,7 +69,7 @@ export class InvoicesService {
     })
     return invoices.map((inv) => ({
       ...inv,
-      lineItems: inv.lineItems ? JSON.parse(inv.lineItems) : [],
+      lineItems: inv.lineItems ? (() => { try { return JSON.parse(inv.lineItems) } catch { return [] } })() : [],
     }))
   }
 
@@ -81,7 +81,7 @@ export class InvoicesService {
     if (!inv) throw new NotFoundException('Invoice not found')
     return {
       ...inv,
-      lineItems: inv.lineItems ? JSON.parse(inv.lineItems) : [],
+      lineItems: inv.lineItems ? (() => { try { return JSON.parse(inv.lineItems) } catch { return [] } })() : [],
     }
   }
 
@@ -140,7 +140,7 @@ export class InvoicesService {
       },
     })
 
-    const currentItems = invoice.lineItems ? JSON.parse(invoice.lineItems) : []
+    const currentItems = invoice.lineItems ? (() => { try { return JSON.parse(invoice.lineItems) } catch { return [] } })() : []
     currentItems.push({ ...dto, id: item.id })
     const subtotal = this.calculateSubtotal(currentItems)
     const { cgst, sgst, igst } = this.calculateGst(subtotal, invoice.placeOfSupply)
@@ -165,7 +165,7 @@ export class InvoicesService {
 
     const invoice = await this.prisma.invoice.findUnique({ where: { id: item.invoiceId } })
     if (invoice) {
-      const currentItems = invoice.lineItems ? JSON.parse(invoice.lineItems) : []
+      const currentItems = invoice.lineItems ? (() => { try { return JSON.parse(invoice.lineItems) } catch { return [] } })() : []
       const idx = currentItems.findIndex((i: any) => i.id === itemId)
       if (idx >= 0) currentItems[idx] = { ...currentItems[idx], ...dto }
       const subtotal = this.calculateSubtotal(currentItems)
@@ -186,7 +186,7 @@ export class InvoicesService {
 
     const invoice = await this.prisma.invoice.findUnique({ where: { id: item.invoiceId } })
     if (invoice) {
-      const currentItems = invoice.lineItems ? JSON.parse(invoice.lineItems) : []
+      const currentItems = invoice.lineItems ? (() => { try { return JSON.parse(invoice.lineItems) } catch { return [] } })() : []
       const filtered = currentItems.filter((i: any) => i.id !== itemId)
       const subtotal = this.calculateSubtotal(filtered)
       const { cgst, sgst, igst } = this.calculateGst(subtotal, invoice.placeOfSupply)
@@ -220,13 +220,13 @@ export class InvoicesService {
 
   async findBillingProfiles(orgId: string) {
     const profiles = await this.prisma.billingProfile.findMany({ where: { orgId }, include: { invoices: true } })
-    return profiles.map((p) => ({ ...p, clientIds: p.clientIds ? JSON.parse(p.clientIds) : [] }))
+    return profiles.map((p) => ({ ...p, clientIds: p.clientIds ? (() => { try { return JSON.parse(p.clientIds) } catch { return [] } })() : [] }))
   }
 
   async findBillingProfile(id: string) {
     const profile = await this.prisma.billingProfile.findUnique({ where: { id }, include: { invoices: true } })
     if (!profile) throw new NotFoundException('Billing profile not found')
-    return { ...profile, clientIds: profile.clientIds ? JSON.parse(profile.clientIds) : [] }
+    return { ...profile, clientIds: profile.clientIds ? (() => { try { return JSON.parse(profile.clientIds) } catch { return [] } })() : [] }
   }
 
   async updateBillingProfile(id: string, dto: { name?: string; clientIds?: string[] }) {
