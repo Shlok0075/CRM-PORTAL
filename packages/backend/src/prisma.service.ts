@@ -81,6 +81,9 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     await run(`CREATE INDEX IF NOT EXISTS "AgreementTemplate_orgId_idx" ON "AgreementTemplate"("orgId");`, 'AgreementTemplate orgId index')
     await run(`ALTER TABLE "AgreementTemplate" ADD CONSTRAINT "AgreementTemplate_org_fkey" FOREIGN KEY ("orgId") REFERENCES "Organization"("id") ON DELETE RESTRICT ON UPDATE CASCADE;`, 'AgreementTemplate org FK')
 
+    await run(`ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "hsnSac" TEXT;`, 'Invoice.hsnSac column')
+    await run(`ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "placeOfSupply" TEXT;`, 'Invoice.placeOfSupply column')
+
     console.log('[DB] ensureDatabase: schema sync complete')
   }
 

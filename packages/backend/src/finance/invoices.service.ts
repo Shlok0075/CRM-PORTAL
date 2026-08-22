@@ -62,26 +62,44 @@ export class InvoicesService {
       if (query.toDate) where.createdAt.lte = new Date(query.toDate)
     }
 
-    const invoices = await this.prisma.invoice.findMany({
-      where: where as any,
-      include: { client: { select: { id: true, name: true } }, lineItemsList: true, creditNotes: true, receipts: true },
-      orderBy: { createdAt: 'desc' },
-    })
-    return invoices.map((inv) => ({
-      ...inv,
-      lineItems: inv.lineItems ? (() => { try { return JSON.parse(inv.lineItems) } catch { return [] } })() : [],
-    }))
+    try {
+      const invoices = await this.prisma.invoice.findMany({
+        where: where as any,
+        include: { client: { select: { id: true, name: true } }, lineItemsList: true, creditNotes: true, receipts: true },
+        orderBy: { createdAt: 'desc' },
+      })
+      return invoices.map((inv) => ({
+        ...inv,
+        lineItems: inv.lineItems ? (() => { try { return JSON.parse(inv.lineItems) } catch { return [] } })() : [],
+      }))
+    } catch (err) {
+      console.error('[INVOICES] findAll failed, retrying without receipts/creditNotes:', err)
+      const invoices = await this.prisma.invoice.findMany({
+        where: where as any,
+        include: { client: { select: { id: true, name: true } }, lineItemsList: true },
+        orderBy: { createdAt: 'desc' },
+      })
+      return invoices.map((inv) => ({
+        ...inv,
+        lineItems: inv.lineItems ? (() => { try { return JSON.parse(inv.lineItems) } catch { return [] } })() : [],
+      }))
+    }
   }
 
   async findOne(id: string) {
-    const inv = await this.prisma.invoice.findUnique({
-      where: { id },
-      include: { client: true, lineItemsList: true, creditNotes: true, receipts: true, billingProfile: true },
-    })
-    if (!inv) throw new NotFoundException('Invoice not found')
-    return {
-      ...inv,
-      lineItems: inv.lineItems ? (() => { try { return JSON.parse(inv.lineItems) } catch { return [] } })() : [],
+    try {
+      const inv = await this.prisma.invoice.findUnique({
+        where: { id },
+        include: { client: true, lineItemsList: true, creditNotes: true, receipts: true, billingProfile: true },
+      })
+      if (!inv) throw new NotFoundException('Invoice not found')
+      return {
+        ...inv,
+        lineItems: inv.lineItems ? (() => { try { return JSON.parse(inv.lineItems) } catch { return [] } })() : [],
+      }
+    } catch (err) {
+      console.error('[INVOICES] findOne failed for id:', id, err)
+      throw err
     }
   }
 

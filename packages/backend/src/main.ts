@@ -1,5 +1,5 @@
 import { NestFactory } from '@nestjs/core'
-import { Module } from '@nestjs/common'
+import { Module, INestApplication, ExceptionFilter, Catch, ArgumentsHost, HttpException, HttpStatus } from '@nestjs/common'
 import * as express from 'express'
 import { PrismaService } from './prisma.service'
 import { UsersModule } from './users/users.module'
@@ -24,6 +24,18 @@ import { EmployeesModule } from './employees/employees.module'
 import { TodosModule } from './todos/todos.module'
 import { EventsModule } from './events/events.module'
 import { TemplatesModule } from './templates/templates.module'
+
+@Catch()
+class GlobalExceptionFilter implements ExceptionFilter {
+  catch(exception: unknown, host: ArgumentsHost) {
+    const ctx = host.switchToHttp()
+    const response = ctx.getResponse()
+    const status = exception instanceof HttpException ? exception.getStatus() : HttpStatus.INTERNAL_SERVER_ERROR
+    const message = exception instanceof Error ? exception.message : 'Internal server error'
+    console.error('[GLOBAL_ERROR]', status, message, exception)
+    response.status(status).json({ statusCode: status, message, timestamp: new Date().toISOString() })
+  }
+}
 
 @Module({
   imports: [
@@ -57,6 +69,7 @@ class AppModule {}
 async function bootstrap() {
   const app = await NestFactory.create(AppModule)
   app.setGlobalPrefix('api')
+  app.useGlobalFilters(new GlobalExceptionFilter())
 
   const configuredOrigins = (process.env.CORS_ORIGIN?.split(',').map((o) => o.trim()) || []).filter(Boolean)
   const localOrigins = ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:3000']
