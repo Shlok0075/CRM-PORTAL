@@ -24,6 +24,7 @@ import { EmployeesModule } from './employees/employees.module'
 import { TodosModule } from './todos/todos.module'
 import { EventsModule } from './events/events.module'
 import { TemplatesModule } from './templates/templates.module'
+import { PortalModule } from './portal/portal.module'
 
 @Catch()
 class GlobalExceptionFilter implements ExceptionFilter {
@@ -61,6 +62,7 @@ class GlobalExceptionFilter implements ExceptionFilter {
     TodosModule,
     EventsModule,
     TemplatesModule,
+    PortalModule,
   ],
   providers: [PrismaService],
 })

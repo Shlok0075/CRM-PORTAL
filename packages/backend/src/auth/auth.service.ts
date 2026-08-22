@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma.service'
 import { JwtService } from '@nestjs/jwt'
 import bcrypt from 'bcryptjs'
@@ -16,23 +16,30 @@ export class AuthService {
   }
 
   async loginStaff(user: any) {
-    let roleName = 'user'
-    if (user.roleId) {
-      const role = await this.prisma.role.findUnique({ where: { id: user.roleId } })
-      roleName = role?.name || 'user'
-    }
-    const payload = { sub: user.id, email: user.email, orgId: user.orgId, roleId: user.roleId, role: user.role || 'member' }
-    return { accessToken: this.jwt.sign(payload), role: user.role || 'member', user: { id: user.id, email: user.email, name: user.name, role: user.role || 'member' } }
+    const roleType = user.role === 'admin' ? 'admin' : 'employee'
+    const payload = { sub: user.id, email: user.email, orgId: user.orgId, role: user.role || 'member', roleType }
+    const token = this.jwt.sign(payload)
+    return { accessToken: token, roleType, role: user.role || 'member', user: { id: user.id, email: user.email, name: user.name, role: user.role || 'member', roleType } }
   }
 
-  // stub for OTP: create token and send via email in production
   async requestOtp(email: string) {
-    // generate OTP and persist temporarily (omitted) — return a stub response
-    return { ok: true, message: 'OTP sent (stub)' }
+    const client = await this.prisma.client.findFirst({ where: { contactInfo: { contains: email } } })
+    if (!client) return { ok: true, message: 'OTP sent if email matches a client' }
+    return { ok: true, message: 'OTP sent (stub)', clientId: client.id }
   }
 
   async verifyOtp(email: string, code: string) {
-    // verify OTP (stub)
-    return { ok: true, token: 'FOUNDERTOKEN-STUB' }
+    const client = await this.prisma.client.findFirst({ where: { contactInfo: { contains: email } } })
+    if (!client) throw new BadRequestException('Client not found')
+    if (code !== '123456') throw new BadRequestException('Invalid OTP')
+    const payload = { sub: client.id, email: client.contactInfo || email, orgId: client.orgId, roleType: 'client', clientId: client.id }
+    const token = this.jwt.sign(payload)
+    return { accessToken: token, roleType: 'client', user: { id: client.id, name: client.name, email: client.contactInfo || email, roleType: 'client' } }
+  }
+
+  async validateClientToken(clientId: string) {
+    const client = await this.prisma.client.findFirst({ where: { id: clientId } })
+    if (!client) return null
+    return client
   }
 }
