@@ -198,6 +198,10 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 </form>
               ) : (
                 <form onSubmit={handleOtpVerify} className="space-y-4">
+                  <div className="p-3 bg-purple-500/10 border border-purple-500/30 rounded-xl">
+                    <p className="text-xs text-purple-300">OTP sent to</p>
+                    <p className="text-sm font-medium text-white">{otpEmail}</p>
+                  </div>
                   <div>
                     <label className="block text-xs font-medium text-slate-300 mb-1.5 uppercase tracking-wider">Enter OTP</label>
                     <div className="relative">
