@@ -12,6 +12,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
   const [rememberMe, setRememberMe] = useState(false)
   const [otpSent, setOtpSent] = useState(false)
   const [otpLoading, setOtpLoading] = useState(false)
+  const [otpEmail, setOtpEmail] = useState('')
 
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -40,6 +41,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     try {
       const form = e.target as HTMLFormElement
       const email = (form.elements.namedItem('email') as HTMLInputElement).value
+      setOtpEmail(email)
       await apiFetch('/auth/otp/request', {
         method: 'POST',
         body: JSON.stringify({ email }),
@@ -58,11 +60,10 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
     setError(null)
     try {
       const form = e.target as HTMLFormElement
-      const email = (form.elements.namedItem('email') as HTMLInputElement).value
       const code = (form.elements.namedItem('code') as HTMLInputElement).value
       const data = await apiFetch('/auth/otp/verify', {
         method: 'POST',
-        body: JSON.stringify({ email, code }),
+        body: JSON.stringify({ email: otpEmail, code }),
       })
       storeToken(data)
     } catch (err: any) {
@@ -205,9 +206,9 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                     </div>
                     <p className="text-[10px] text-slate-400 mt-1">Demo OTP: 123456</p>
                   </div>
-                  <input name="email" type="hidden" />
+                  <input name="email" type="hidden" value={otpEmail} readOnly />
                   <button type="submit" disabled={loading} className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white py-3 rounded-xl text-sm font-semibold hover:from-purple-600 hover:to-pink-700 transition-all shadow-lg shadow-purple-500/30 disabled:opacity-50">{loading ? 'Verifying...' : 'Verify & Login'}</button>
-                  <button type="button" onClick={() => setOtpSent(false)} className="w-full text-xs text-slate-300 hover:text-white">Back to email</button>
+                  <button type="button" onClick={() => { setOtpSent(false); setOtpEmail('') }} className="w-full text-xs text-slate-300 hover:text-white">Back to email</button>
                 </form>
               )}
             </>
