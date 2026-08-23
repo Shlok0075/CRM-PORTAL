@@ -1,7 +1,8 @@
-import { Controller, Post, Body, Get, Param, Req, UseGuards, Query, Put, Delete, Patch } from '@nestjs/common'
+import { Controller, Post, Body, Get, Param, Req, UseGuards, Query, Put, Delete, Patch, Res, Header } from '@nestjs/common'
 import { DocumentsService } from './documents.service'
 import { JwtGuard } from '../auth/jwt.guard'
 import { CreateDocumentDto } from './dto/create-document.dto'
+import { Response } from 'express'
 
 @Controller('documents')
 export class DocumentsController {
@@ -9,8 +10,11 @@ export class DocumentsController {
 
   @UseGuards(JwtGuard)
   @Get()
-  async listAll(@Req() req: any) {
+  async listAll(@Req() req: any, @Query('search') search?: string, @Query('category') category?: string) {
     const orgId = req.user?.orgId
+    if (search) {
+      return this.svc.search(orgId, search, category)
+    }
     return this.svc.listAll(orgId)
   }
 
@@ -72,9 +76,81 @@ export class DocumentsController {
   }
 
   @UseGuards(JwtGuard)
+  @Post('upload-file')
+  async uploadFile(@Req() req: any, @Body() body: any) {
+    const orgId = req.user?.orgId
+    return this.svc.uploadFile(orgId, { ...body, uploadedBy: req.user?.sub, uploadedByType: 'staff' })
+  }
+
+  @UseGuards(JwtGuard)
   @Put(':id/reupload')
   async reupload(@Req() req: any, @Param('id') id: string, @Body() body: { fileUrl: string; fileName?: string; fileType?: string; fileSize?: number }) {
     const orgId = req.user?.orgId
     return this.svc.reupload(orgId, id, { ...body, uploadedBy: req.user?.sub })
+  }
+
+  @UseGuards(JwtGuard)
+  @Put(':id/reupload-file')
+  async reuploadFile(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+    const orgId = req.user?.orgId
+    return this.svc.reuploadFile(orgId, id, { ...body, uploadedBy: req.user?.sub, uploadedByType: 'staff' })
+  }
+
+  @UseGuards(JwtGuard)
+  @Get(':id/download')
+  async download(@Req() req: any, @Param('id') id: string, @Res() res: Response) {
+    const orgId = req.user?.orgId
+    const doc = await this.svc.getDocument(orgId, id)
+    if (!doc) {
+      res.status(404).json({ message: 'Document not found' })
+      return
+    }
+
+    if (doc.fileUrl && doc.fileUrl.startsWith('data:')) {
+      const matches = doc.fileUrl.match(/^data:([^;]+);/)
+      const contentType = matches ? matches[1] : 'application/octet-stream'
+      const base64Data = doc.fileUrl.split(',')[1] || ''
+      const buffer = Buffer.from(base64Data, 'base64')
+      res.setHeader('Content-Type', contentType)
+      res.setHeader('Content-Disposition', `attachment; filename="${doc.fileName || 'document'}"`)
+      res.send(buffer)
+      return
+    }
+
+    if (doc.fileUrl) {
+      res.redirect(doc.fileUrl)
+      return
+    }
+
+    res.status(404).json({ message: 'File not found' })
+  }
+
+  @UseGuards(JwtGuard)
+  @Get(':id/preview')
+  async preview(@Req() req: any, @Param('id') id: string, @Res() res: Response) {
+    const orgId = req.user?.orgId
+    const doc = await this.svc.getDocument(orgId, id)
+    if (!doc) {
+      res.status(404).json({ message: 'Document not found' })
+      return
+    }
+
+    if (doc.fileUrl && doc.fileUrl.startsWith('data:')) {
+      const matches = doc.fileUrl.match(/^data:([^;]+);/)
+      const contentType = matches ? matches[1] : 'application/octet-stream'
+      const base64Data = doc.fileUrl.split(',')[1] || ''
+      const buffer = Buffer.from(base64Data, 'base64')
+      res.setHeader('Content-Type', contentType)
+      res.setHeader('Content-Disposition', `inline; filename="${doc.fileName || 'document'}"`)
+      res.send(buffer)
+      return
+    }
+
+    if (doc.fileUrl) {
+      res.redirect(doc.fileUrl)
+      return
+    }
+
+    res.status(404).json({ message: 'File not found' })
   }
 }

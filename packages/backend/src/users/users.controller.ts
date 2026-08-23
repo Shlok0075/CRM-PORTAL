@@ -15,13 +15,18 @@ export class UsersController {
   }
 
   @Get(':id')
-  async getUser(@Param('id') id: string) {
-    return this.usersService.findByEmail(id)
+  @UseGuards(JwtGuard)
+  async getUser(@Req() req: any, @Param('id') id: string) {
+    const userId = req.user?.sub
+    if (!userId) return null
+    return this.usersService.findById(userId)
   }
 
   @Patch('me')
   @UseGuards(JwtGuard)
   async updateMe(@Req() req: any, @Body() data: any) {
-    return this.usersService.updateProfile(req.user.sub, data)
+    const userId = req.user?.sub
+    if (!userId) return null
+    return this.usersService.updateProfile(userId, data)
   }
 }

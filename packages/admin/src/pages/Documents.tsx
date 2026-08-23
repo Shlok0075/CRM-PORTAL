@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { FolderOpen, Upload, Download, Search, FileText, Image, FileSpreadsheet, File, Eye, Plus, X, Package, RefreshCw } from 'lucide-react'
+import { useState, useRef } from 'react'
+import { FolderOpen, Upload, Download, Search, FileText, Image, FileSpreadsheet, File, Eye, Plus, X, Package, RefreshCw, UploadCloud } from 'lucide-react'
 import { apiFetch, API_BASE } from '../lib/api'
 import useApi from '../hooks/useApi'
 
@@ -9,6 +9,10 @@ export default function Documents() {
   const [showUploadModal, setShowUploadModal] = useState(false)
   const [showPhysicalModal, setShowPhysicalModal] = useState(false)
   const [submitting, setSubmitting] = useState(false)
+  const [uploadProgress, setUploadProgress] = useState(0)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [filePreview, setFilePreview] = useState<string | null>(null)
 
   const docQuery = searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''
   const { data: docData, loading: docLoading, error: docError, refetch: refetchDocuments } = useApi(`/documents${docQuery}`)
@@ -25,34 +29,73 @@ export default function Documents() {
     refetchPhysicalDocs()
   }
 
-  const handleBulkDownload = async () => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      setSelectedFile(file)
+      const reader = new FileReader()
+      reader.onload = (ev) => {
+        setFilePreview(ev.target?.result as string)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  const handleUpload = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setSubmitting(true)
+    setUploadProgress(0)
     try {
-      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
-      const res = await fetch(`${API_BASE}/documents/bulk-download`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      if (!res.ok) throw new Error('Download failed')
-      const blob = await res.blob()
-      const url = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = url
-      a.download = 'documents.zip'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      const form = e.target as HTMLFormElement
+      const fileName = (form.elements.namedItem('fileName') as HTMLInputElement).value
+      const category = (form.elements.namedItem('category') as HTMLSelectElement).value
+
+      if (!selectedFile) {
+        alert('Please select a file')
+        return
+      }
+
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        try {
+          setUploadProgress(50)
+          const base64Data = ev.target?.result as string
+          await apiFetch('/documents/upload-file', {
+            method: 'POST',
+            body: JSON.stringify({
+              fileName,
+              category,
+              fileData: base64Data,
+              fileType: selectedFile.type,
+              fileSize: selectedFile.size,
+            }),
+          })
+          setUploadProgress(100)
+          setShowUploadModal(false)
+          setSelectedFile(null)
+          setFilePreview(null)
+          if (fileInputRef.current) fileInputRef.current.value = ''
+          refetchAll()
+        } catch (err: any) {
+          alert(err.data?.message || err.message || 'Failed to upload document')
+        } finally {
+          setSubmitting(false)
+          setUploadProgress(0)
+        }
+      }
+      reader.readAsDataURL(selectedFile)
     } catch (err: any) {
-      alert(err.message || 'Failed to download documents')
+      alert(err.data?.message || err.message || 'Failed to upload document')
+      setSubmitting(false)
+      setUploadProgress(0)
     }
   }
 
   const handlePreview = async (doc: any) => {
     try {
-      const blob = await apiFetch(`/documents/${doc.id}/preview`)
-      if (blob instanceof Blob) {
-        const url = URL.createObjectURL(blob)
-        window.open(url, '_blank')
-      }
+      const blob = await apiFetch(`/documents/${doc.id}/preview`, {}, 'blob')
+      const url = URL.createObjectURL(blob)
+      window.open(url, '_blank')
     } catch (err: any) {
       alert(err.data?.message || err.message || 'Failed to preview document')
     }
@@ -60,43 +103,43 @@ export default function Documents() {
 
   const handleDownload = async (doc: any) => {
     try {
-      const blob = await apiFetch(`/documents/${doc.id}/download`)
-      if (blob instanceof Blob) {
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = doc.fileName || 'document'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        URL.revokeObjectURL(url)
-      }
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/documents/${doc.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Download failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = doc.fileName || 'document'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert(err.data?.message || err.message || 'Failed to download document')
+      alert(err.message || 'Failed to download document')
     }
   }
 
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setSubmitting(true)
+  const handleBulkDownload = async () => {
     try {
-      const form = e.target as HTMLFormElement
-      const formData = new FormData(form)
-      const data = {
-        fileName: formData.get('fileName') as string,
-        category: formData.get('category') as string,
-        fileUrl: `/uploads/${Date.now()}_${formData.get('fileName')}`,
-      }
-      await apiFetch('/documents/upload', {
-        method: 'POST',
-        body: JSON.stringify(data),
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/documents/bulk-download?ids=all`, {
+        headers: { Authorization: `Bearer ${token}` },
       })
-      setShowUploadModal(false)
-      refetchAll()
+      if (!res.ok) throw new Error('Download failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'documents.txt'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
     } catch (err: any) {
-      alert(err.data?.message || err.message || 'Failed to upload document')
-    } finally {
-      setSubmitting(false)
+      alert(err.message || 'Failed to download documents')
     }
   }
 
@@ -128,13 +171,27 @@ export default function Documents() {
 
   const getFileIcon = (type: string) => {
     switch (type?.toLowerCase()) {
-      case 'pdf': return <FileText className="text-red-500" size={20} />
-      case 'xlsx':
-      case 'xls': return <FileSpreadsheet className="text-emerald-500" size={20} />
-      case 'jpg':
-      case 'png': return <Image className="text-blue-500" size={20} />
-      case 'zip': return <Package className="text-amber-500" size={20} />
+      case 'application/pdf': return <FileText className="text-red-500" size={20} />
+      case 'application/vnd.ms-excel':
+      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': return <FileSpreadsheet className="text-emerald-500" size={20} />
+      case 'image/jpeg':
+      case 'image/png':
+      case 'image/gif': return <Image className="text-blue-500" size={20} />
+      case 'application/zip':
+      case 'application/x-zip-compressed': return <Package className="text-amber-500" size={20} />
       default: return <File className="text-gray-500" size={20} />
+    }
+  }
+
+  const getFileExtension = (type: string) => {
+    switch (type?.toLowerCase()) {
+      case 'application/pdf': return 'PDF'
+      case 'application/vnd.ms-excel':
+      case 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': return 'XLS'
+      case 'image/jpeg': return 'JPG'
+      case 'image/png': return 'PNG'
+      case 'application/zip': return 'ZIP'
+      default: return 'FILE'
     }
   }
 
@@ -152,7 +209,7 @@ export default function Documents() {
             <Plus size={16} />
             Physical Register
           </button>
-          <button onClick={() => setShowUploadModal(true)} className="btn-primary flex items-center gap-2">
+          <button onClick={() => { setShowUploadModal(true); setSelectedFile(null); setFilePreview(null); if (fileInputRef.current) fileInputRef.current.value = '' }} className="btn-primary flex items-center gap-2">
             <Upload size={16} />
             Upload Document
           </button>
@@ -222,7 +279,7 @@ export default function Documents() {
                             {getFileIcon(doc.fileType)}
                             <div>
                               <p className="font-semibold text-sm text-gray-900">{doc.fileName || 'Untitled'}</p>
-                              <p className="text-xs text-gray-500">{doc.category}</p>
+                              <p className="text-xs text-gray-500">{doc.fileType ? getFileExtension(doc.fileType) : 'Unknown type'} • {doc.fileSize ? `${(doc.fileSize / 1024).toFixed(1)} KB` : '-'}</p>
                             </div>
                           </div>
                         </td>
@@ -297,10 +354,33 @@ export default function Documents() {
           <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full">
             <div className="p-6 border-b border-gray-100 flex items-center justify-between">
               <h3 className="text-xl font-bold text-gray-900">Upload Document</h3>
-              <button onClick={() => setShowUploadModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
+              <button onClick={() => { setShowUploadModal(false); setSelectedFile(null); setFilePreview(null); if (fileInputRef.current) fileInputRef.current.value = '' }} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
             </div>
             <form onSubmit={handleUpload}>
               <div className="p-6 space-y-4">
+                <div>
+                  <label className="form-label">Select File</label>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    onChange={handleFileSelect}
+                    className="form-input"
+                    required
+                  />
+                  {selectedFile && (
+                    <p className="text-xs text-gray-500 mt-1">Selected: {selectedFile.name} ({(selectedFile.size / 1024).toFixed(1)} KB)</p>
+                  )}
+                </div>
+                {filePreview && (
+                  <div className="p-3 bg-gray-50 rounded-xl">
+                    <p className="text-xs font-medium text-gray-700 mb-2">Preview</p>
+                    {filePreview.startsWith('data:image') ? (
+                      <img src={filePreview} alt="Preview" className="max-h-40 rounded-lg" />
+                    ) : (
+                      <p className="text-sm text-gray-600">File selected — {selectedFile?.name}</p>
+                    )}
+                  </div>
+                )}
                 <div>
                   <label className="form-label">File Name</label>
                   <input name="fileName" type="text" className="form-input" placeholder="e.g., GSTR-3B_July2025.pdf" required />
@@ -319,9 +399,16 @@ export default function Documents() {
                     <option>Filed Returns</option>
                   </select>
                 </div>
+                {uploadProgress > 0 && uploadProgress < 100 && (
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div className="bg-emerald-600 h-2 rounded-full transition-all" style={{ width: `${uploadProgress}%` }} />
+                  </div>
+                )}
                 <div className="flex gap-3 pt-2">
-                  <button type="submit" disabled={submitting} className="btn-primary flex-1 disabled:opacity-50">{submitting ? 'Saving...' : 'Save Document'}</button>
-                  <button type="button" onClick={() => setShowUploadModal(false)} className="btn-secondary flex-1">Cancel</button>
+                  <button type="submit" disabled={submitting} className="btn-primary flex-1 disabled:opacity-50 flex items-center justify-center gap-2">
+                    {submitting ? <><div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Uploading...</> : <><UploadCloud size={16} />Save Document</>}
+                  </button>
+                  <button type="button" onClick={() => { setShowUploadModal(false); setSelectedFile(null); setFilePreview(null); if (fileInputRef.current) fileInputRef.current.value = '' }} className="btn-secondary flex-1">Cancel</button>
                 </div>
               </div>
             </form>

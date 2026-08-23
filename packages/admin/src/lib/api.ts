@@ -9,13 +9,13 @@ function clearToken() {
   sessionStorage.removeItem('token')
 }
 
-export async function apiFetch(path: string, options: RequestInit = {}) {
+export async function apiFetch(path: string, options: RequestInit = {}, responseType: 'json' | 'blob' | 'text' = 'json'): Promise<any> {
   const token = getToken()
   const headers: Record<string, string> = {
     ...(options.headers as Record<string, string>),
   }
   if (token) headers['Authorization'] = `Bearer ${token}`
-  if (!(options.body instanceof FormData)) {
+  if (!(options.body instanceof FormData) && responseType === 'json') {
     headers['Content-Type'] = 'application/json'
   }
 
@@ -31,6 +31,29 @@ export async function apiFetch(path: string, options: RequestInit = {}) {
   }
 
   if (res.status === 204) return null
+
+  if (responseType === 'blob') {
+    if (!res.ok) {
+      const text = await res.text()
+      let data = null
+      try { data = JSON.parse(text) } catch {}
+      const err = new Error(data?.message || `HTTP ${res.status}`) as any
+      err.status = res.status
+      err.data = data
+      throw err
+    }
+    return await res.blob()
+  }
+
+  if (responseType === 'text') {
+    if (!res.ok) {
+      const err = new Error(`HTTP ${res.status}`) as any
+      err.status = res.status
+      throw err
+    }
+    return await res.text()
+  }
+
   const text = await res.text()
   const data = text ? JSON.parse(text) : null
   if (!res.ok) {

@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma.service'
 import { Response } from 'express'
 
@@ -92,6 +92,35 @@ export class DocumentsService {
     return this.prisma.document.create({ data: { ...cleaned, org: { connect: { id: orgId } } } as any })
   }
 
+  async uploadFile(orgId: string, data: any) {
+    const cleaned = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null && v !== undefined)) as any
+    if (!cleaned.fileData) {
+      throw new BadRequestException('fileData is required')
+    }
+    if (!cleaned.fileName) {
+      throw new BadRequestException('fileName is required')
+    }
+    if (!cleaned.category) {
+      throw new BadRequestException('category is required')
+    }
+    return this.prisma.document.create({
+      data: {
+        org: { connect: { id: orgId } },
+        fileName: cleaned.fileName,
+        fileType: cleaned.fileType || 'application/octet-stream',
+        fileSize: cleaned.fileSize || 0,
+        category: cleaned.category,
+        fileUrl: cleaned.fileData,
+        clientId: cleaned.clientId as any,
+        taskId: cleaned.taskId as any,
+        eventId: cleaned.eventId as any,
+        uploadedBy: cleaned.uploadedBy,
+        uploadedByType: cleaned.uploadedByType || 'staff',
+        isPublic: cleaned.isPublic || false,
+      },
+    } as any)
+  }
+
   async reupload(orgId: string, id: string, data: any) {
     const existing = await this.prisma.document.findFirst({ where: { id, orgId } })
     if (!existing) return null
@@ -100,7 +129,7 @@ export class DocumentsService {
     return this.prisma.document.update({
       where: { id },
       data: {
-        fileUrl: data.fileUrl,
+        fileUrl: data.fileUrl || existing.fileUrl,
         fileName: data.fileName ?? existing.fileName,
         fileType: data.fileType ?? existing.fileType,
         fileSize: data.fileSize ?? existing.fileSize,
@@ -109,6 +138,30 @@ export class DocumentsService {
         uploadedByType: data.uploadedByType,
       },
     })
+  }
+
+  async reuploadFile(orgId: string, id: string, data: any) {
+    const existing = await this.prisma.document.findFirst({ where: { id, orgId } })
+    if (!existing) return null
+
+    const nextVersion = existing.version + 1
+    return this.prisma.document.update({
+      where: { id },
+      data: {
+        fileUrl: data.fileData || existing.fileUrl,
+        fileType: data.fileType || existing.fileType,
+        fileSize: data.fileSize || existing.fileSize,
+        version: nextVersion,
+        uploadedBy: data.uploadedBy,
+        uploadedByType: data.uploadedByType || existing.uploadedByType,
+      },
+    })
+  }
+
+  async getDocument(orgId: string, id: string) {
+    const doc = await this.prisma.document.findFirst({ where: { id, orgId } })
+    if (!doc) return null
+    return doc
   }
 
   async bulkDownload(orgId: string, documentIds: string[]) {

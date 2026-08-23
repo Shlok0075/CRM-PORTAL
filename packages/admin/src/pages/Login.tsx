@@ -125,7 +125,7 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                   activeTab === tab.key ? 'bg-emerald-600 text-white shadow-lg' : 'text-slate-300 hover:text-white hover:bg-white/5'
                 }`}
               >
-                <tab.icon size={14} />
+                {(() => { const Icon = tab.icon; return <Icon size={14} /> })()}
                 {tab.label}
               </button>
             ))}
@@ -230,7 +230,6 @@ export default function Login({ onLogin }: { onLogin: () => void }) {
                 <p className="text-[10px] text-slate-500">password: employeepass</p>
               </div>
             </div>
-          </div>
           </div>
         </div>
 
