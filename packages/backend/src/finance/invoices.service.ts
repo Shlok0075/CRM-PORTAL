@@ -22,8 +22,15 @@ export class InvoicesService {
         hsnSac: item.hsnSac || cleaned.hsnSac,
       }))
 
+      if (cleaned.clientId) {
+        const clientExists = await this.prisma.client.findFirst({ where: { id: cleaned.clientId, orgId } })
+        if (!clientExists) {
+          throw new BadRequestException(`Client ${cleaned.clientId} not found in your organization`)
+        }
+      }
+
       const invoiceNumber = await this.generateInvoiceNumber(orgId)
-      return this.prisma.invoice.create({
+      const invoice = await this.prisma.invoice.create({
         data: {
           org: { connect: { id: orgId } },
           clientId: cleaned.clientId,
@@ -40,16 +47,25 @@ export class InvoicesService {
           dueDate: cleaned.dueDate ? new Date(cleaned.dueDate) : undefined,
           hsnSac: cleaned.hsnSac,
           placeOfSupply: cleaned.placeOfSupply,
-          lineItemsList: {
-            create: itemsWithHsn.map((item: any) => ({
-              description: item.description,
-              quantity: item.quantity,
-              unitPrice: item.unitPrice,
-              amount: item.amount,
-              hsnSac: item.hsnSac,
-            })),
-          },
         } as any,
+        include: { client: true, billingProfile: true },
+      })
+
+      if (itemsWithHsn.length > 0) {
+        await this.prisma.invoiceLineItem.createMany({
+          data: itemsWithHsn.map((item: any) => ({
+            invoiceId: invoice.id,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            amount: item.amount,
+            hsnSac: item.hsnSac,
+          })),
+        })
+      }
+
+      return this.prisma.invoice.findUnique({
+        where: { id: invoice.id },
         include: { lineItemsList: true, client: true, billingProfile: true },
       })
     } catch (err) {
