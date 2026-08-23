@@ -23,18 +23,25 @@ export class AuthService {
   }
 
   async requestOtp(email: string) {
-    const client = await this.prisma.client.findFirst({ where: { contactInfo: { contains: email } } })
+    const client = await this.prisma.client.findFirst({ where: { contactInfo: { contains: email, mode: 'insensitive' } } })
     if (!client) return { ok: true, message: 'OTP sent if email matches a client' }
     return { ok: true, message: 'OTP sent (stub)', clientId: client.id }
   }
 
   async verifyOtp(email: string, code: string) {
-    const client = await this.prisma.client.findFirst({ where: { contactInfo: { contains: email } } })
+    const client = await this.prisma.client.findFirst({ where: { contactInfo: { contains: email, mode: 'insensitive' } } })
     if (!client) throw new BadRequestException('Client not found')
     if (code !== '123456') throw new BadRequestException('Invalid OTP')
-    const payload = { sub: client.id, email: client.contactInfo || email, orgId: client.orgId, roleType: 'client', clientId: client.id }
+    let clientEmail = email
+    if (client.contactInfo) {
+      try {
+        const parsed = JSON.parse(client.contactInfo)
+        if (parsed.email) clientEmail = parsed.email
+      } catch {}
+    }
+    const payload = { sub: client.id, email: clientEmail, orgId: client.orgId, roleType: 'client', clientId: client.id }
     const token = this.jwt.sign(payload)
-    return { accessToken: token, roleType: 'client', user: { id: client.id, name: client.name, email: client.contactInfo || email, roleType: 'client' } }
+    return { accessToken: token, roleType: 'client', user: { id: client.id, name: client.name, email: clientEmail, roleType: 'client' } }
   }
 
   async validateClientToken(clientId: string) {
