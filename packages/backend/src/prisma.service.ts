@@ -126,6 +126,19 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
       } else {
         console.log('[DB] ensureSeed: employee user exists')
       }
+
+      const clientsWithoutContact = await this.client.findMany({
+        where: { orgId: admin?.orgId || (await this.organization.findFirst())!.id, contactInfo: null },
+        select: { id: true, name: true },
+      })
+      for (const c of clientsWithoutContact) {
+        const email = c.name.toLowerCase().replace(/[^a-z0-9]/g, '') + '@example.com'
+        await this.client.update({
+          where: { id: c.id },
+          data: { contactInfo: JSON.stringify({ email, phone: '', address: '' }) },
+        }).catch((err: any) => console.error('[DB] ensureSeed: client contactInfo update failed:', err?.message || err))
+        console.log(`[DB] ensureSeed: added contactInfo for client ${c.name}`)
+      }
     } catch (err) {
       console.error('[DB] ensureSeed: failed', err)
     }

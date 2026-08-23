@@ -65,6 +65,7 @@ async function main() {
     data: {
       org: { connect: { id: org.id } },
       name: 'Acme Industries Pvt Ltd',
+      contactInfo: JSON.stringify({ email: 'acme@example.com', phone: '+919876543210', address: 'Mumbai, Maharashtra' }),
       pan: 'AACCA1234F',
       gstins: JSON.stringify(['27AACCA1234F1Z5']),
       type: 'company',
@@ -77,6 +78,7 @@ async function main() {
     data: {
       org: { connect: { id: org.id } },
       name: 'Beta Technologies',
+      contactInfo: JSON.stringify({ email: 'beta@example.com', phone: '+919876543211', address: 'Bangalore, Karnataka' }),
       pan: 'AABBT5678G',
       gstins: JSON.stringify(['27AABBT5678G1Z3']),
       type: 'company',
