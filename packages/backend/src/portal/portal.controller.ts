@@ -1,4 +1,4 @@
-import { Controller, Get, Req, UseGuards, Query, Param, Post, Body, Patch, Delete } from '@nestjs/common'
+import { Controller, Get, Req, UseGuards, Query, Param, Post, Body, Patch, Delete, BadRequestException } from '@nestjs/common'
 import { JwtGuard } from '../auth/jwt.guard'
 import { PrismaService } from '../prisma.service'
 
@@ -77,13 +77,15 @@ export class PortalController {
   @Post('upload-document')
   async uploadDocument(@Req() req: any, @Body() body: any) {
     const u = this.user(req)
+    const orgId = u.orgId
     const data: any = {
-      orgId: u.orgId,
+      orgId,
       category: body.category || 'Other',
       fileUrl: body.fileUrl,
       fileName: body.fileName,
       fileType: body.fileType,
       fileSize: body.fileSize,
+      fileData: body.fileData,
       uploadedBy: u.sub,
       uploadedByType: u.roleType === 'client' ? 'client' : 'staff',
       version: 1,
@@ -95,7 +97,46 @@ export class PortalController {
     }
     if (body.taskId) data.taskId = body.taskId
     if (body.eventId) data.eventId = body.eventId
-    return this.prisma.document.create({ data })
+    if (data.fileData) {
+      const maxSize = 10 * 1024 * 1024
+      if (data.fileSize && data.fileSize > maxSize) {
+        throw new BadRequestException('File size exceeds 10MB limit')
+      }
+      const allowedTypes = [
+        'application/pdf',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'application/zip',
+        'application/x-zip-compressed',
+        'text/plain',
+        'text/csv',
+      ]
+      if (data.fileType && !allowedTypes.includes(data.fileType)) {
+        throw new BadRequestException(`File type ${data.fileType} is not allowed`)
+      }
+      return this.prisma.document.create({
+        data: {
+          org: { connect: { id: orgId } },
+          fileName: data.fileName,
+          fileType: data.fileType || 'application/octet-stream',
+          fileSize: data.fileSize || 0,
+          category: data.category,
+          fileUrl: data.fileData,
+          clientId: data.clientId as any,
+          taskId: data.taskId as any,
+          eventId: data.eventId as any,
+          uploadedBy: data.uploadedBy,
+          uploadedByType: data.uploadedByType || 'staff',
+          isPublic: false,
+        },
+      } as any)
+    }
+    return this.prisma.document.create({ data: { ...data, org: { connect: { id: orgId } } } } as any)
   }
 
   @Get('my-timesheet')

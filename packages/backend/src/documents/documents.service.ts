@@ -103,6 +103,27 @@ export class DocumentsService {
     if (!cleaned.category) {
       throw new BadRequestException('category is required')
     }
+    const maxSize = 10 * 1024 * 1024
+    if (cleaned.fileSize && cleaned.fileSize > maxSize) {
+      throw new BadRequestException('File size exceeds 10MB limit')
+    }
+    const allowedTypes = [
+      'application/pdf',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'application/zip',
+      'application/x-zip-compressed',
+      'text/plain',
+      'text/csv',
+    ]
+    if (cleaned.fileType && !allowedTypes.includes(cleaned.fileType)) {
+      throw new BadRequestException(`File type ${cleaned.fileType} is not allowed`)
+    }
     return this.prisma.document.create({
       data: {
         org: { connect: { id: orgId } },
