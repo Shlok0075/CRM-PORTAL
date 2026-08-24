@@ -6,13 +6,16 @@ export class QuotationsService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, dto: any) {
+    const data: any = {
+      org: { connect: { id: orgId } },
+      lineItems: JSON.stringify(dto.lineItems || []),
+      status: 'draft',
+    }
+    if (dto.clientId) {
+      data.client = { connect: { id: dto.clientId } }
+    }
     return this.prisma.quotation.create({
-      data: {
-        org: { connect: { id: orgId } },
-        clientId: dto.clientId,
-        lineItems: JSON.stringify(dto.lineItems || []),
-        status: 'draft',
-      } as any,
+      data,
       include: { client: true },
     })
   }

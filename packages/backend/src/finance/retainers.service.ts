@@ -6,18 +6,21 @@ export class RetainersService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, dto: any) {
+    const data: any = {
+      org: { connect: { id: orgId } },
+      packageIds: JSON.stringify(dto.packageIds || []),
+      totalAmount: dto.totalAmount,
+      billingFrequency: dto.billingFrequency,
+      startDate: new Date(dto.startDate),
+      endDate: dto.endDate ? new Date(dto.endDate) : undefined,
+      autoRenew: dto.autoRenew || false,
+      status: dto.status || 'active',
+    }
+    if (dto.clientId) {
+      data.client = { connect: { id: dto.clientId } }
+    }
     return this.prisma.retainer.create({
-      data: {
-        org: { connect: { id: orgId } },
-        clientId: dto.clientId,
-        packageIds: JSON.stringify(dto.packageIds || []),
-        totalAmount: dto.totalAmount,
-        billingFrequency: dto.billingFrequency,
-        startDate: new Date(dto.startDate),
-        endDate: dto.endDate ? new Date(dto.endDate) : undefined,
-        autoRenew: dto.autoRenew || false,
-        status: dto.status || 'active',
-      } as any,
+      data,
       include: { client: true },
     })
   }

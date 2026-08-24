@@ -22,32 +22,31 @@ export class InvoicesService {
         hsnSac: item.hsnSac || cleaned.hsnSac,
       }))
 
+      const invoiceNumber = await this.generateInvoiceNumber(orgId)
+      const data: any = {
+        org: { connect: { id: orgId } },
+        invoiceNumber,
+        lineItems: JSON.stringify(itemsWithHsn),
+        subtotal,
+        cgst,
+        sgst,
+        igst,
+        total,
+        status: 'draft',
+        issueDate: cleaned.issueDate ? new Date(cleaned.issueDate) : undefined,
+        dueDate: cleaned.dueDate ? new Date(cleaned.dueDate) : undefined,
+        hsnSac: cleaned.hsnSac,
+        placeOfSupply: cleaned.placeOfSupply,
+      }
       if (cleaned.clientId) {
-        const clientExists = await this.prisma.client.findFirst({ where: { id: cleaned.clientId, orgId } })
-        if (!clientExists) {
-          throw new BadRequestException(`Client ${cleaned.clientId} not found in your organization`)
-        }
+        data.client = { connect: { id: cleaned.clientId } }
+      }
+      if (cleaned.billingProfileId) {
+        data.billingProfile = { connect: { id: cleaned.billingProfileId } }
       }
 
-      const invoiceNumber = await this.generateInvoiceNumber(orgId)
       const invoice = await this.prisma.invoice.create({
-        data: {
-          org: { connect: { id: orgId } },
-          clientId: cleaned.clientId,
-          billingProfileId: cleaned.billingProfileId,
-          invoiceNumber,
-          lineItems: JSON.stringify(itemsWithHsn),
-          subtotal,
-          cgst,
-          sgst,
-          igst,
-          total,
-          status: 'draft',
-          issueDate: cleaned.issueDate ? new Date(cleaned.issueDate) : undefined,
-          dueDate: cleaned.dueDate ? new Date(cleaned.dueDate) : undefined,
-          hsnSac: cleaned.hsnSac,
-          placeOfSupply: cleaned.placeOfSupply,
-        } as any,
+        data,
         include: { client: true, billingProfile: true },
       })
 
@@ -146,23 +145,44 @@ export class InvoicesService {
       updateData.total = subtotal + cgst + sgst + igst
       if (dto.placeOfSupply) updateData.placeOfSupply = dto.placeOfSupply
       if (dto.hsnSac) updateData.hsnSac = dto.hsnSac
+    }
 
+    if (updateData.clientId) {
+      updateData.client = { connect: { id: updateData.clientId } }
+      delete updateData.clientId
+    }
+    if (updateData.billingProfileId) {
+      updateData.billingProfile = { connect: { id: updateData.billingProfileId } }
+      delete updateData.billingProfileId
+    }
+
+    const invoice = await this.prisma.invoice.update({
+      where: { id },
+      data: updateData,
+      include: { lineItemsList: true, client: true, billingProfile: true },
+    })
+
+    if (dto.lineItems) {
       await this.prisma.invoiceLineItem.deleteMany({ where: { invoiceId: id } })
-      updateData.lineItemsList = {
-        create: dto.lineItems.map((item: any) => ({
-          description: item.description,
-          quantity: item.quantity,
-          unitPrice: item.unitPrice,
-          amount: item.amount,
-          hsnSac: item.hsnSac || dto.hsnSac,
-        })),
+      try {
+        await this.prisma.invoiceLineItem.createMany({
+          data: dto.lineItems.map((item: any) => ({
+            invoiceId: id,
+            description: item.description,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            amount: item.amount,
+            hsnSac: item.hsnSac || dto.hsnSac,
+          })),
+        })
+      } catch (lineItemErr) {
+        console.error('[INVOICES] update createMany lineItems failed:', lineItemErr)
       }
     }
 
-    return this.prisma.invoice.update({
+    return this.prisma.invoice.findUnique({
       where: { id },
-      data: updateData,
-      include: { lineItemsList: true, client: true },
+      include: { lineItemsList: true, client: true, billingProfile: true },
     })
   }
 

@@ -39,7 +39,6 @@ export class EventsService {
       org: { connect: { id: orgId } },
       title: cleaned.title,
       description: cleaned.description,
-      clientId: cleaned.clientId,
       assigneeIds: this.toStrArray(cleaned.assigneeIds),
       status: cleaned.status || 'pending',
       priority: cleaned.priority || 'medium',
@@ -47,6 +46,9 @@ export class EventsService {
       dueDate: cleaned.dueDate ? new Date(cleaned.dueDate) : undefined,
       expectedDate: cleaned.expectedDate ? new Date(cleaned.expectedDate) : undefined,
       createdBy: createdById ? { connect: { id: createdById } } : undefined,
+    }
+    if (cleaned.clientId) {
+      data.client = { connect: { id: cleaned.clientId } }
     }
     return this.serialize(
       await this.prisma.event.create({

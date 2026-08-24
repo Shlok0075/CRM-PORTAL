@@ -6,17 +6,22 @@ export class ExpensesService {
   constructor(private prisma: PrismaService) {}
 
   async create(orgId: string, dto: any) {
+    const data: any = {
+      org: { connect: { id: orgId } },
+      amount: dto.amount,
+      isBillable: dto.isBillable || false,
+      description: dto.description,
+      date: dto.date ? new Date(dto.date) : new Date(),
+      attachmentId: dto.attachmentId,
+    }
+    if (dto.clientId) {
+      data.client = { connect: { id: dto.clientId } }
+    }
+    if (dto.categoryId) {
+      data.category = { connect: { id: dto.categoryId } }
+    }
     return this.prisma.expense.create({
-      data: {
-        org: { connect: { id: orgId } },
-        clientId: dto.clientId,
-        categoryId: dto.categoryId,
-        amount: dto.amount,
-        isBillable: dto.isBillable || false,
-        description: dto.description,
-        date: dto.date ? new Date(dto.date) : new Date(),
-        attachmentId: dto.attachmentId,
-      } as any,
+      data,
       include: { client: true, category: true },
     })
   }
