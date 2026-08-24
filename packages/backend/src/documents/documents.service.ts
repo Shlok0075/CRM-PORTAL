@@ -92,8 +92,8 @@ export class DocumentsService {
     return this.prisma.document.create({ data: { ...cleaned, org: { connect: { id: orgId } } } as any })
   }
 
-  async uploadFile(orgId: string, data: any) {
-    const cleaned = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null && v !== undefined)) as any
+  async uploadFile(orgId: string, body: any) {
+    const cleaned = Object.fromEntries(Object.entries(body).filter(([, v]) => v !== null && v !== undefined)) as any
     if (!cleaned.fileData) {
       throw new BadRequestException('fileData is required')
     }
@@ -124,25 +124,26 @@ export class DocumentsService {
     if (cleaned.fileType && !allowedTypes.includes(cleaned.fileType)) {
       throw new BadRequestException(`File type ${cleaned.fileType} is not allowed`)
     }
+    const createData: any = {
+      org: { connect: { id: orgId } },
+      fileName: cleaned.fileName,
+      fileType: cleaned.fileType || 'application/octet-stream',
+      fileSize: cleaned.fileSize || 0,
+      category: cleaned.category,
+      fileUrl: cleaned.fileData,
+      uploadedBy: cleaned.uploadedBy,
+      uploadedByType: cleaned.uploadedByType || 'staff',
+      isPublic: cleaned.isPublic || false,
+    }
+    if (cleaned.clientId) createData.client = { connect: { id: cleaned.clientId } }
+    if (cleaned.taskId) createData.task = { connect: { id: cleaned.taskId } }
+    if (cleaned.eventId) createData.event = { connect: { id: cleaned.eventId } }
     return this.prisma.document.create({
-      data: {
-        org: { connect: { id: orgId } },
-        fileName: cleaned.fileName,
-        fileType: cleaned.fileType || 'application/octet-stream',
-        fileSize: cleaned.fileSize || 0,
-        category: cleaned.category,
-        fileUrl: cleaned.fileData,
-        clientId: cleaned.clientId as any,
-        taskId: cleaned.taskId as any,
-        eventId: cleaned.eventId as any,
-        uploadedBy: cleaned.uploadedBy,
-        uploadedByType: cleaned.uploadedByType || 'staff',
-        isPublic: cleaned.isPublic || false,
-      },
+      data: createData,
     } as any)
   }
 
-  async reupload(orgId: string, id: string, data: any) {
+  async reupload(orgId: string, id: string, body: any) {
     const existing = await this.prisma.document.findFirst({ where: { id, orgId } })
     if (!existing) return null
 
@@ -150,18 +151,18 @@ export class DocumentsService {
     return this.prisma.document.update({
       where: { id },
       data: {
-        fileUrl: data.fileUrl || existing.fileUrl,
-        fileName: data.fileName ?? existing.fileName,
-        fileType: data.fileType ?? existing.fileType,
-        fileSize: data.fileSize ?? existing.fileSize,
+        fileUrl: body.fileUrl || existing.fileUrl,
+        fileName: body.fileName ?? existing.fileName,
+        fileType: body.fileType ?? existing.fileType,
+        fileSize: body.fileSize ?? existing.fileSize,
         version: nextVersion,
-        uploadedBy: data.uploadedBy,
-        uploadedByType: data.uploadedByType,
+        uploadedBy: body.uploadedBy,
+        uploadedByType: body.uploadedByType,
       },
     })
   }
 
-  async reuploadFile(orgId: string, id: string, data: any) {
+  async reuploadFile(orgId: string, id: string, body: any) {
     const existing = await this.prisma.document.findFirst({ where: { id, orgId } })
     if (!existing) return null
 
@@ -169,12 +170,12 @@ export class DocumentsService {
     return this.prisma.document.update({
       where: { id },
       data: {
-        fileUrl: data.fileData || existing.fileUrl,
-        fileType: data.fileType || existing.fileType,
-        fileSize: data.fileSize || existing.fileSize,
+        fileUrl: body.fileData || existing.fileUrl,
+        fileType: body.fileType || existing.fileType,
+        fileSize: body.fileSize || existing.fileSize,
         version: nextVersion,
-        uploadedBy: data.uploadedBy,
-        uploadedByType: data.uploadedByType || existing.uploadedByType,
+        uploadedBy: body.uploadedBy,
+        uploadedByType: body.uploadedByType || existing.uploadedByType,
       },
     })
   }

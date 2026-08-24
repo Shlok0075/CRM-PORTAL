@@ -396,6 +396,16 @@ export class TasksService {
     return { id }
   }
 
+  async verify(orgId: string, id: string, reviewerId?: string) {
+    const task = await this.prisma.task.findFirst({ where: { id, orgId } })
+    if (!task) throw new NotFoundException(`Task ${id} not found`)
+    if (task.status !== 'completed') throw new BadRequestException('Task must be completed before verification')
+    return this.serializeTask(await this.prisma.task.update({
+      where: { id },
+      data: { status: 'verified', isOverdue: false },
+    }))
+  }
+
   // Checklists
   async addChecklistItem(orgId: string, taskId: string, body: { label: string; order?: number }) {
     const task = await this.prisma.task.findFirst({ where: { id: taskId, orgId } })

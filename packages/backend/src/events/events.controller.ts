@@ -12,10 +12,11 @@ export class EventsController {
   private role(req: any) { return req.user?.role }
 
   @Get()
-  list(@Req() req: any, @Query('status') status?: string, @Query('clientId') clientId?: string) {
+  list(@Req() req: any, @Query('status') status?: string, @Query('clientId') clientId?: string, @Query('search') search?: string) {
     return this.svc.findAll(this.orgId(req), {
       status,
       clientId,
+      search,
       userId: this.role(req) === 'member' ? this.userId(req) : undefined,
     })
   }
