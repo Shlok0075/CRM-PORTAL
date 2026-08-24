@@ -29,9 +29,17 @@ export class TodosService {
 
   async create(orgId: string, dto: CreateTodoDto) {
     const cleaned = Object.fromEntries(Object.entries(dto).filter(([, v]) => v !== null && v !== undefined && v !== '')) as any
-    const data: any = { ...cleaned, status: 'pending', org: { connect: { id: orgId } } }
-    if (cleaned.assigneeId) data.assignee = { connect: { id: cleaned.assigneeId } }
-    if (data.dueDate) data.dueDate = new Date(data.dueDate)
+    const data: any = {
+      org: { connect: { id: orgId } },
+      title: cleaned.title,
+      status: 'pending',
+      dueDate: cleaned.dueDate ? new Date(cleaned.dueDate) : undefined,
+      repeatRule: cleaned.repeatRule,
+      priority: cleaned.priority || 'medium',
+    }
+    if (cleaned.assigneeId) {
+      data.assignee = { connect: { id: cleaned.assigneeId } }
+    }
     try {
       return await this.prisma.todo.create({ data, include: { assignee: { select: { name: true } } } })
     } catch (err: any) {
@@ -44,7 +52,11 @@ export class TodosService {
     const todo = await this.prisma.todo.findFirst({ where: { id, orgId } })
     if (!todo) throw new NotFoundException(`Todo ${id} not found`)
     const data: any = { ...dto }
-    if (dto.dueDate) data.dueDate = new Date(dto.dueDate)
+    if (data.dueDate) data.dueDate = new Date(data.dueDate)
+    if (data.assigneeId) {
+      data.assignee = { connect: { id: data.assigneeId } }
+      delete data.assigneeId
+    }
     return this.prisma.todo.update({ where: { id }, data, include: { assignee: { select: { name: true } } } })
   }
 

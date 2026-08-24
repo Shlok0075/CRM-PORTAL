@@ -523,6 +523,7 @@ model Todo {
   title      String
   dueDate    DateTime?
   repeatRule String?
+  priority   String?      @default("medium")
   status     String       @default("pending")
   createdAt  DateTime     @default(now())
 }

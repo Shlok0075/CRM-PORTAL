@@ -91,6 +91,8 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     await run(`CREATE INDEX IF NOT EXISTS "InvoiceLineItem_invoiceId_idx" ON "InvoiceLineItem"("invoiceId");`, 'InvoiceLineItem invoiceId index')
     await run(`ALTER TABLE "InvoiceLineItem" ADD CONSTRAINT "InvoiceLineItem_invoice_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;`, 'InvoiceLineItem invoice FK')
 
+    await run(`ALTER TABLE "Todo" ADD COLUMN IF NOT EXISTS "priority" TEXT DEFAULT 'medium';`, 'Todo.priority column')
+
     console.log('[DB] ensureDatabase: schema sync complete')
   }
 
