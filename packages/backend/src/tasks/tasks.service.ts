@@ -207,7 +207,7 @@ export class TasksService {
     if (cleaned.clientId) data.client = { connect: { id: cleaned.clientId } }
     if (cleaned.reviewerId) data.reviewerId = cleaned.reviewerId
     if (cleaned.assigneeIds) {
-      data.assigneeIds = Array.isArray(cleaned.assigneeIds) ? cleaned.assigneeIds[0] : cleaned.assigneeIds
+      data.assignee = { connect: { id: Array.isArray(cleaned.assigneeIds) ? cleaned.assigneeIds[0] : cleaned.assigneeIds } }
     }
     if (recurrenceRuleId) data.recurrenceRule = { connect: { id: recurrenceRuleId } }
     console.log('CREATE TASK DATA:', JSON.stringify(data))
@@ -235,22 +235,27 @@ export class TasksService {
 
     const { recurrenceRuleId, ...rest } = dto
     const tasks = await this.prisma.$transaction(
-      owned.map((c) =>
-        this.prisma.task.create({
-          data: {
-            ...rest,
-            org: { connect: { id: orgId } },
-            clientId: c.id,
-            assigneeIds: this.normalizeAssigneeIds(rest.assigneeIds),
-            tags: this.toStrArray(rest.tags),
-            customFields: this.serializeCustomFields(rest.customFields),
-            recurrenceRule: recurrenceRuleId ? { connect: { id: recurrenceRuleId } } : undefined,
-            status: rest.status || 'not_started',
-            priority: rest.priority || 'medium',
-            isOverdue: this.computeOverdue(rest.dueDate, rest.status || 'not_started'),
-          } as any,
-        }),
-      ),
+      owned.map((c) => {
+        const data: any = {
+          org: { connect: { id: orgId } },
+          client: { connect: { id: c.id } },
+          tags: this.toStrArray(rest.tags),
+          status: rest.status || 'not_started',
+          priority: rest.priority || 'medium',
+          isOverdue: this.computeOverdue(rest.dueDate, rest.status || 'not_started'),
+        }
+        if (rest.title) data.title = rest.title
+        if (rest.description) data.description = rest.description
+        if (rest.dueDate) data.dueDate = new Date(rest.dueDate)
+        if (rest.targetDate) data.targetDate = new Date(rest.targetDate)
+        if (rest.serviceType) data.serviceType = rest.serviceType
+        if (rest.customFields) data.customFields = this.serializeCustomFields(rest.customFields)
+        if (rest.reviewerId) data.reviewerId = rest.reviewerId
+        const assigneeId = this.normalizeAssigneeIds(rest.assigneeIds)
+        if (assigneeId) data.assignee = { connect: { id: assigneeId } }
+        if (recurrenceRuleId) data.recurrenceRule = { connect: { id: recurrenceRuleId } }
+        return this.prisma.task.create({ data })
+      }),
     )
     return tasks.map((t) => this.serializeTask(t))
   }
@@ -350,7 +355,11 @@ export class TasksService {
       this.assertStatusTransition(existing.status, rest.status)
     }
 
-    if (rest.assigneeIds !== undefined) data.assigneeIds = this.normalizeAssigneeIds(rest.assigneeIds)
+    if (rest.assigneeIds !== undefined) {
+      const normalized = this.normalizeAssigneeIds(rest.assigneeIds)
+      if (normalized) data.assignee = { connect: { id: normalized } }
+      else data.assignee = { disconnect: true }
+    }
     if (Array.isArray(rest.tags)) data.tags = this.toStrArray(rest.tags)
     if (rest.customFields !== undefined) data.customFields = this.serializeCustomFields(rest.customFields)
 
@@ -681,11 +690,12 @@ export class TasksService {
         priority: tmpl.priority,
         serviceType: tmpl.serviceType,
         tags: this.toStrArray(tmpl.tags),
-        assigneeIds: this.normalizeAssigneeIds(body.assigneeIds),
         status: 'not_started',
         isOverdue: false,
       }
       if (body.clientId) data.client = { connect: { id: body.clientId } }
+      const assigneeId = this.normalizeAssigneeIds(body.assigneeIds)
+      if (assigneeId) data.assignee = { connect: { id: assigneeId } }
 
       const task = await tx.task.create({ data })
 
