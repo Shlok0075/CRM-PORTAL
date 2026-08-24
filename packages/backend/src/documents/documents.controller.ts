@@ -62,10 +62,15 @@ export class DocumentsController {
 
   @UseGuards(JwtGuard)
   @Get('bulk-download')
-  async bulkDownload(@Req() req: any, @Query('ids') ids: string) {
+  async bulkDownload(@Req() req: any, @Query('ids') ids: string, @Res() res: Response) {
     const orgId = req.user?.orgId
-    const documentIds = ids.split(',').filter(Boolean)
-    return this.svc.bulkDownload(orgId, documentIds)
+    const documentIds = ids === 'all' ? undefined : ids.split(',').filter(Boolean)
+    if (documentIds === undefined) {
+      const allDocs = await this.svc.listAll(orgId)
+      const idsOnly = allDocs.map((d: any) => d.id)
+      return this.svc.bulkDownload(orgId, idsOnly, res)
+    }
+    return this.svc.bulkDownload(orgId, documentIds, res)
   }
 
   @UseGuards(JwtGuard)

@@ -1,9 +1,11 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../prisma.service'
+import { encrypt, decrypt, maskPassword } from '../common/crypto.util'
+import { NotificationsService } from '../notifications/notifications.service'
 
 @Injectable()
 export class ClientsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
 
   async getClients(orgId: string, search?: string, status?: string) {
     const where: any = { orgId }
@@ -112,10 +114,14 @@ export class ClientsService {
       select: { id: true },
     })
     if (!client) return []
-    return this.prisma.clientCredential.findMany({
+    const creds = await this.prisma.clientCredential.findMany({
       where: { clientId },
       orderBy: { createdAt: 'desc' },
     })
+    return creds.map((c) => ({
+      ...c,
+      encryptedPassword: maskPassword(c.encryptedPassword),
+    }))
   }
 
   async createCredential(orgId: string, data: any) {
@@ -123,10 +129,14 @@ export class ClientsService {
       where: { id: data.clientId, orgId },
       select: { id: true },
     })
-    if (!client) throw new Error('Client not found')
-    const { clientId, ...rest } = data
+    if (!client) throw new BadRequestException('Client not found')
+    const { clientId, password, ...rest } = data
     return this.prisma.clientCredential.create({
-      data: { ...rest, clientId },
+      data: {
+        ...rest,
+        clientId,
+        encryptedPassword: password ? encrypt(password) : encrypt(''),
+      },
     })
   }
 
@@ -135,10 +145,9 @@ export class ClientsService {
       where: { id },
       include: { client: { select: { orgId: true } } },
     })
-    if (!cred || cred.client.orgId !== orgId) throw new Error('Credential not found')
-    return this.prisma.clientCredential.delete({
-      where: { id },
-    })
+    if (!cred || cred.client.orgId !== orgId) throw new NotFoundException('Credential not found')
+    await this.prisma.clientCredential.delete({ where: { id } })
+    return { id }
   }
 
   async getDscRecords(orgId: string, clientId: string) {
@@ -147,10 +156,17 @@ export class ClientsService {
       select: { id: true },
     })
     if (!client) return []
-    return this.prisma.dscRecord.findMany({
+    const dscs = await this.prisma.dscRecord.findMany({
       where: { clientId },
       orderBy: { expiryDate: 'asc' },
     })
+    for (const dsc of dscs) {
+      const daysLeft = Math.ceil((new Date(dsc.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+      if (daysLeft <= 30 && daysLeft >= 0) {
+        this.notifications.create(orgId, clientId, 'dsc.expiring', { dscId: dsc.id, holderName: dsc.holderName, expiryDate: dsc.expiryDate, daysLeft }).catch(() => {})
+      }
+    }
+    return dscs
   }
 
   async getExpiringDsc(orgId: string, days: number = 30) {
@@ -176,7 +192,7 @@ export class ClientsService {
       where: { id: data.clientId, orgId },
       select: { id: true },
     })
-    if (!client) throw new Error('Client not found')
+    if (!client) throw new BadRequestException('Client not found')
     const { clientId, expiryDate, ...rest } = data
     return this.prisma.dscRecord.create({
       data: { ...rest, clientId, expiryDate: new Date(expiryDate) },
@@ -188,10 +204,9 @@ export class ClientsService {
       where: { id },
       include: { client: { select: { orgId: true } } },
     })
-    if (!dsc || dsc.client.orgId !== orgId) throw new Error('DSC record not found')
-    return this.prisma.dscRecord.delete({
-      where: { id },
-    })
+    if (!dsc || dsc.client.orgId !== orgId) throw new NotFoundException('DSC record not found')
+    await this.prisma.dscRecord.delete({ where: { id } })
+    return { id }
   }
 
   async gstinLookup(gstin: string) {

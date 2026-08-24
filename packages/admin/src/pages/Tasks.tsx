@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, Search, AlertTriangle, CheckCircle2, Circle, Play, X, ChevronRight, RefreshCw } from 'lucide-react'
 import useApi from '../hooks/useApi'
+import { apiFetch } from '../lib/api'
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -366,6 +367,9 @@ export default function Tasks() {
                 <div className="flex gap-3">
                   <button onClick={async () => { await handleStatusChange(activeTask.id, 'in_progress'); setActiveTaskId(null) }} className="btn-primary flex items-center gap-2"><Play size={16} /> Start</button>
                   <button onClick={async () => { await handleStatusChange(activeTask.id, 'completed'); setActiveTaskId(null) }} className="btn-secondary flex items-center gap-2"><CheckCircle2 size={16} /> Complete</button>
+                  {activeTask.status === 'completed' && (
+                    <button onClick={async () => { await apiFetch(`/tasks/${activeTask.id}/verify`, { method: 'POST' }); setActiveTaskId(null) }} className="btn-primary flex items-center gap-2"><CheckCircle2 size={16} /> Verify</button>
+                  )}
                   <button onClick={async () => { await handleDelete(activeTask.id); setActiveTaskId(null) }} className="btn-secondary flex items-center gap-2 text-red-600"><X size={16} /> Delete</button>
                 </div>
               </div>

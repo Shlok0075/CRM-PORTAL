@@ -3,11 +3,11 @@ import { ClientsService } from './clients.service'
 import { ClientsController } from './clients.controller'
 import { PrismaService } from '../prisma.service'
 import { AuthModule } from '../auth/auth.module'
-import { JwtGuard } from '../auth/jwt.guard'
+import { NotificationsModule } from '../notifications/notifications.module'
 
 @Module({
-  imports: [AuthModule],
+  imports: [AuthModule, NotificationsModule],
   controllers: [ClientsController],
-  providers: [ClientsService, PrismaService, JwtGuard],
+  providers: [ClientsService, PrismaService],
 })
 export class ClientsModule {}

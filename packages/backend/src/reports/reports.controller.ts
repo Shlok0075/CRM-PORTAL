@@ -34,6 +34,12 @@ export class ReportsController {
       res.setHeader('Content-Disposition', 'attachment; filename=task-report.csv')
       return res.send(csv)
     }
+    if (query.export === 'pdf') {
+      const pdf = this.svc.taskReportPdf(data)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', 'attachment; filename=task-report.pdf')
+      return res.send(pdf)
+    }
     return data
   }
 
@@ -47,6 +53,12 @@ export class ReportsController {
       res.setHeader('Content-Type', 'text/csv')
       res.setHeader('Content-Disposition', 'attachment; filename=time-report.csv')
       return res.send(csv)
+    }
+    if (query.export === 'pdf') {
+      const pdf = this.svc.timeReportPdf(data)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', 'attachment; filename=time-report.pdf')
+      return res.send(pdf)
     }
     return data
   }
@@ -62,6 +74,12 @@ export class ReportsController {
       res.setHeader('Content-Disposition', 'attachment; filename=attendance-report.csv')
       return res.send(csv)
     }
+    if (query.export === 'pdf') {
+      const pdf = this.svc.attendanceReportPdf(data)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', 'attachment; filename=attendance-report.pdf')
+      return res.send(pdf)
+    }
     return data
   }
 
@@ -75,6 +93,12 @@ export class ReportsController {
       res.setHeader('Content-Type', 'text/csv')
       res.setHeader('Content-Disposition', `attachment; filename=${query.type === 'dsc' ? 'dsc-report.csv' : 'client-report.csv'}`)
       return res.send(csv)
+    }
+    if (query.export === 'pdf') {
+      const pdf = query.type === 'dsc' ? this.svc.dscReportPdf(data) : this.svc.clientReportPdf(data)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', `attachment; filename=${query.type === 'dsc' ? 'dsc-report.pdf' : 'client-report.pdf'}`)
+      return res.send(pdf)
     }
     return data
   }
@@ -90,6 +114,12 @@ export class ReportsController {
       res.setHeader('Content-Disposition', 'attachment; filename=financial-report.csv')
       return res.send(csv)
     }
+    if (query.export === 'pdf') {
+      const pdf = this.svc.financialReportPdf(data)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', 'attachment; filename=financial-report.pdf')
+      return res.send(pdf)
+    }
     return data
   }
 
@@ -103,6 +133,12 @@ export class ReportsController {
       res.setHeader('Content-Type', 'text/csv')
       res.setHeader('Content-Disposition', 'attachment; filename=document-report.csv')
       return res.send(csv)
+    }
+    if (query.export === 'pdf') {
+      const pdf = this.svc.documentReportPdf(data)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', 'attachment; filename=document-report.pdf')
+      return res.send(pdf)
     }
     return data
   }
@@ -118,6 +154,12 @@ export class ReportsController {
       res.setHeader('Content-Disposition', 'attachment; filename=compliance-report.csv')
       return res.send(csv)
     }
+    if (query.export === 'pdf') {
+      const pdf = this.svc.complianceReportPdf(data)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', 'attachment; filename=compliance-report.pdf')
+      return res.send(pdf)
+    }
     return data
   }
 
@@ -131,6 +173,12 @@ export class ReportsController {
       res.setHeader('Content-Type', 'text/csv')
       res.setHeader('Content-Disposition', 'attachment; filename=unbilled-report.csv')
       return res.send(csv)
+    }
+    if (query.export === 'pdf') {
+      const pdf = this.svc.unbilledReportPdf(data)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader('Content-Disposition', 'attachment; filename=unbilled-report.pdf')
+      return res.send(pdf)
     }
     return data
   }

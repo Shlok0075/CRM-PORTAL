@@ -133,7 +133,7 @@ export default function Documents() {
       const url = URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = 'documents.txt'
+      a.download = 'documents.zip'
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)

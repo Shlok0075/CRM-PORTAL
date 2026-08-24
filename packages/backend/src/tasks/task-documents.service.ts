@@ -1,11 +1,12 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma.service'
+import { NotificationsService } from '../notifications/notifications.service'
 
 export const DOCUMENT_REQUEST_STATUSES = ['pending', 'received', 'partial'] as const
 
 @Injectable()
 export class TaskDocumentsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
 
   async create(orgId: string, body: any) {
     if (!body.taskId) throw new BadRequestException('taskId is required')
@@ -27,7 +28,11 @@ export class TaskDocumentsService {
       if (!client) throw new NotFoundException(`Client ${body.clientId} not found`)
       data.client = { connect: { id: body.clientId } }
     }
-    return this.prisma.taskDocumentRequest.create({ data })
+    const created = await this.prisma.taskDocumentRequest.create({ data })
+    if (body.clientId) {
+      this.notifications.create(orgId, body.clientId, 'document.requested', { taskId: body.taskId, documentName: body.documentName }).catch(() => {})
+    }
+    return created
   }
 
   async findAll(orgId: string, filters: { clientId?: string; taskId?: string; status?: string }) {
@@ -99,10 +104,14 @@ export class TaskDocumentsService {
     if (!existing) throw new NotFoundException(`Document request ${id} not found`)
     const doc = await this.prisma.document.findFirst({ where: { id: documentId, orgId } })
     if (!doc) throw new NotFoundException(`Document ${documentId} not found`)
-    return this.prisma.taskDocumentRequest.update({
+    const updated = await this.prisma.taskDocumentRequest.update({
       where: { id },
       data: { uploadedDocumentId: doc.id, status: 'received' },
     })
+    if (existing.clientId) {
+      this.notifications.create(orgId, existing.clientId, 'document.uploaded', { taskId: existing.taskId, documentName: existing.documentName }).catch(() => {})
+    }
+    return updated
   }
 
   async delete(orgId: string, id: string) {

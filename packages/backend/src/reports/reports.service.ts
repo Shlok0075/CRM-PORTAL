@@ -503,4 +503,165 @@ export class ReportsService {
     const candidates = rule.match(/\d{4}-\d{2}-\d{2}/)
     return candidates ? new Date(candidates[0]) : null
   }
+
+  taskReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('Task Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.tasks?.length) {
+      data.tasks.forEach((t: any, i: number) => {
+        doc.text(`${i + 1}. ${t.title || 'Untitled'} | Client: ${t.clientName || '-'} | Status: ${t.status} | Updated: ${t.updatedAt ? new Date(t.updatedAt).toLocaleDateString('en-IN') : '-'}`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
+
+  timeReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('Time Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.logs?.length) {
+      data.logs.forEach((l: any, i: number) => {
+        doc.text(`${i + 1}. ${l.taskTitle || '-'} | User: ${l.userName || '-'} | Duration: ${l.durationMinutes || 0} min | Date: ${l.startTime ? new Date(l.startTime).toLocaleDateString('en-IN') : '-'}`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
+
+  attendanceReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('Attendance Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.records?.length) {
+      data.records.forEach((r: any, i: number) => {
+        doc.text(`${i + 1}. ${r.userName || '-'} | Date: ${r.date ? new Date(r.date).toLocaleDateString('en-IN') : '-'} | Status: ${r.status || '-'}`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
+
+  clientReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('Client Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.clients?.length) {
+      data.clients.forEach((c: any, i: number) => {
+        doc.text(`${i + 1}. ${c.name || '-'} | PAN: ${c.pan || '-'} | GSTIN: ${c.gstins || '-'} | Status: ${c.status || '-'}`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
+
+  dscReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('DSC Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.records?.length) {
+      data.records.forEach((r: any, i: number) => {
+        doc.text(`${i + 1}. ${r.clientName || '-'} | Holder: ${r.holderName || '-'} | Class: ${r.dscClass || '-'} | Expiry: ${r.expiryDate ? new Date(r.expiryDate).toLocaleDateString('en-IN') : '-'} | Status: ${r.custodyStatus || '-'}`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
+
+  financialReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('Financial Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.invoices?.length) {
+      doc.text('Invoices:').moveDown()
+      data.invoices.forEach((inv: any, i: number) => {
+        doc.text(`${i + 1}. ${inv.invoiceNumber || '-'} | Client: ${inv.clientName || '-'} | Total: ${inv.total || 0} | Status: ${inv.status || '-'}`)
+      })
+      doc.moveDown()
+    }
+    if (data.expenses?.length) {
+      doc.text('Expenses:').moveDown()
+      data.expenses.forEach((exp: any, i: number) => {
+        doc.text(`${i + 1}. ${exp.categoryName || '-'} | Amount: ${exp.amount || 0} | Billable: ${exp.isBillable ? 'Yes' : 'No'}`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
+
+  documentReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('Document Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.documents?.length) {
+      data.documents.forEach((d: any, i: number) => {
+        doc.text(`${i + 1}. ${d.fileName || '-'} | Category: ${d.category || '-'} | Client: ${d.clientName || '-'} | Task: ${d.taskTitle || '-'}`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
+
+  complianceReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('Compliance Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.entries?.length) {
+      data.entries.forEach((e: any, i: number) => {
+        doc.text(`${i + 1}. ${e.entryName || '-'} | Applicable: ${e.applicableTo || '-'} | On Time: ${e.onTime || 0} | Late: ${e.late || 0} | Pending: ${e.pending || 0} | Adherence: ${e.adherenceRate || 0}%`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
+
+  unbilledReportPdf(data: any) {
+    const { PDFDocument } = require('pdfkit')
+    const doc = new PDFDocument()
+    const chunks: Buffer[] = []
+    doc.on('data', (c) => chunks.push(c))
+    doc.on('end', () => {})
+    doc.fontSize(16).text('Unbilled Report', { align: 'center' }).moveDown()
+    doc.fontSize(10).text(`Generated: ${new Date().toLocaleString('en-IN')}`).moveDown()
+    if (data.tasks?.length) {
+      data.tasks.forEach((t: any, i: number) => {
+        doc.text(`${i + 1}. ${t.title || '-'} | Client: ${t.clientName || '-'} | Status: ${t.status || '-'}`)
+      })
+    }
+    doc.end()
+    return Buffer.concat(chunks)
+  }
 }

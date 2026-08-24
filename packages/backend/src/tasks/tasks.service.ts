@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma.service'
 import { CreateTaskDto } from './dto/create-task.dto'
+import { NotificationsService } from '../notifications/notifications.service'
 
 export const TASK_STATUSES = ['not_started', 'in_progress', 'completed', 'verified'] as const
 export type TaskStatus = (typeof TASK_STATUSES)[number]
@@ -20,7 +21,7 @@ export type TaskTemplate = {
 
 @Injectable()
 export class TasksService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, private notifications: NotificationsService) {}
 
   private readonly TEMPLATES: TaskTemplate[] = [
     {
@@ -212,7 +213,12 @@ export class TasksService {
     if (recurrenceRuleId) data.recurrenceRule = { connect: { id: recurrenceRuleId } }
     console.log('CREATE TASK DATA:', JSON.stringify(data))
     try {
-      return this.serializeTask(await this.prisma.task.create({ data }))
+      const task = this.serializeTask(await this.prisma.task.create({ data }))
+      if (cleaned.assigneeIds) {
+        const assigneeId = Array.isArray(cleaned.assigneeIds) ? cleaned.assigneeIds[0] : cleaned.assigneeIds
+        this.notifications.create(orgId, assigneeId, 'task.assigned', { taskId: task.id, title: task.title }).catch(() => {})
+      }
+      return task
     } catch (err: any) {
       console.error('TASK CREATE ERROR:', err.message, err.stack, JSON.stringify(data))
       throw err
@@ -375,7 +381,11 @@ export class TasksService {
 
     data.isOverdue = this.computeOverdue(rest.dueDate ?? existing.dueDate, data.status ?? existing.status)
 
-    return this.serializeTask(await this.prisma.task.update({ where: { id }, data }))
+    const updated = this.serializeTask(await this.prisma.task.update({ where: { id }, data }))
+    if (rest.status && rest.status !== existing.status) {
+      this.notifications.create(orgId, updated.assigneeIds || existing.assigneeIds, 'task.status_changed', { taskId: updated.id, title: updated.title, status: updated.status }).catch(() => {})
+    }
+    return updated
   }
 
   async setStatus(orgId: string, id: string, status: string) {
@@ -386,7 +396,9 @@ export class TasksService {
     const data: any = { status }
     if (status === 'completed' || status === 'verified') data.isOverdue = false
 
-    return this.serializeTask(await this.prisma.task.update({ where: { id }, data }))
+    const updated = this.serializeTask(await this.prisma.task.update({ where: { id }, data }))
+    this.notifications.create(orgId, updated.assigneeIds, 'task.status_changed', { taskId: updated.id, title: updated.title, status: updated.status }).catch(() => {})
+    return updated
   }
 
   async delete(orgId: string, id: string) {

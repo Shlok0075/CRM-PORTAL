@@ -1,6 +1,7 @@
 import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma.service'
 import { Response } from 'express'
+import archiver from 'archiver'
 
 const DOCUMENT_CATEGORIES = [
   'Financial Statements',
@@ -186,15 +187,35 @@ export class DocumentsService {
     return doc
   }
 
-  async bulkDownload(orgId: string, documentIds: string[]) {
-    if (!documentIds.length) return { zipUrl: null }
-    const docs = await this.prisma.document.findMany({ where: { id: { in: documentIds }, orgId } })
-    const content = docs.map((d: any) => `${d.fileName || 'Untitled'}|${d.category}|${d.fileUrl || ''}|${d.client?.name || '-'}|${d.task?.title || '-'}|${new Date(d.createdAt).toLocaleDateString('en-IN')}`).join('\n')
-    return new Response(content, {
-      headers: {
-        'Content-Type': 'text/plain',
-        'Content-Disposition': 'attachment; filename="documents.txt"',
-      },
-    })
+  async bulkDownload(orgId: string, documentIds: string[], res?: Response) {
+    if (!documentIds.length) {
+      if (res) {
+        res.setHeader('Content-Type', 'application/json')
+        return res.status(400).json({ message: 'No documents selected' })
+      }
+      return { zipUrl: null }
+    }
+    const docs = await this.prisma.document.findMany({ where: { id: { in: documentIds }, orgId }, include: { client: { select: { name: true } }, task: { select: { title: true } } } })
+    if (!docs.length) {
+      if (res) {
+        res.setHeader('Content-Type', 'application/json')
+        return res.status(404).json({ message: 'No documents found' })
+      }
+      return { zipUrl: null }
+    }
+    if (!res) {
+      return { zipUrl: null }
+    }
+    res.setHeader('Content-Type', 'application/zip')
+    res.setHeader('Content-Disposition', 'attachment; filename="documents.zip"')
+    const createArchive = (archiver as any).default || archiver
+    const archive = createArchive('zip', { zlib: { level: 6 } })
+    archive.on('error', (err: any) => { throw err })
+    archive.pipe(res)
+    for (const doc of docs) {
+      const content = `${doc.fileName || 'Untitled'}|${doc.category || 'Uncategorized'}|${doc.fileUrl || ''}|${doc.client?.name || '-'}|${doc.task?.title || '-'}|${new Date(doc.createdAt).toLocaleDateString('en-IN')}`
+      archive.append(content, { name: `${doc.fileName || 'untitled'}_${doc.id}.txt` })
+    }
+    await archive.finalize()
   }
 }
