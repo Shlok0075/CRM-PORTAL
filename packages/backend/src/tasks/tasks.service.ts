@@ -190,22 +190,27 @@ export class TasksService {
 
   async create(orgId: string, dto: CreateTaskDto) {
     const { clientIds, recurrenceRuleId, ...rest } = dto
+    const cleaned = Object.fromEntries(Object.entries(rest).filter(([, v]) => v !== null && v !== undefined && v !== '')) as any
     const data: any = {
-      ...rest,
       org: { connect: { id: orgId } },
-      tags: this.toStrArray(rest.tags),
-      customFields: this.serializeCustomFields(rest.customFields),
-      isOverdue: this.computeOverdue(rest.dueDate, rest.status || 'not_started'),
+      title: cleaned.title,
+      status: cleaned.status || 'not_started',
+      dueDate: cleaned.dueDate ? new Date(cleaned.dueDate) : undefined,
+      targetDate: cleaned.targetDate ? new Date(cleaned.targetDate) : undefined,
+      tags: this.toStrArray(cleaned.tags),
+      priority: cleaned.priority || 'medium',
+      serviceType: cleaned.serviceType,
+      customFields: this.serializeCustomFields(cleaned.customFields),
+      isOverdue: this.computeOverdue(cleaned.dueDate, cleaned.status || 'not_started'),
     }
-    if (Array.isArray(rest.assigneeIds)) {
-      data.assigneeIds = rest.assigneeIds.length > 0 ? rest.assigneeIds[0] : null
-    } else if (typeof rest.assigneeIds === 'string') {
-      data.assigneeIds = rest.assigneeIds || null
+    if (cleaned.description) data.description = cleaned.description
+    if (cleaned.clientId) data.client = { connect: { id: cleaned.clientId } }
+    if (cleaned.reviewerId) data.reviewerId = cleaned.reviewerId
+    if (cleaned.assigneeIds) {
+      data.assigneeIds = Array.isArray(cleaned.assigneeIds) ? cleaned.assigneeIds[0] : cleaned.assigneeIds
     }
-    console.log('CREATE TASK DATA:', JSON.stringify(data))
     if (recurrenceRuleId) data.recurrenceRule = { connect: { id: recurrenceRuleId } }
-    if (!data.status) data.status = 'not_started'
-    if (!data.priority) data.priority = 'medium'
+    console.log('CREATE TASK DATA:', JSON.stringify(data))
     try {
       return this.serializeTask(await this.prisma.task.create({ data }))
     } catch (err: any) {
