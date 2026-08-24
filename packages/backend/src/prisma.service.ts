@@ -84,6 +84,13 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     await run(`ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "hsnSac" TEXT;`, 'Invoice.hsnSac column')
     await run(`ALTER TABLE "Invoice" ADD COLUMN IF NOT EXISTS "placeOfSupply" TEXT;`, 'Invoice.placeOfSupply column')
 
+    await run(
+      `CREATE TABLE IF NOT EXISTS "InvoiceLineItem" ("id" TEXT NOT NULL, "invoiceId" TEXT NOT NULL, "description" TEXT NOT NULL, "quantity" REAL, "unitPrice" REAL, "amount" REAL, "hsnSac" TEXT, CONSTRAINT "InvoiceLineItem_pkey" PRIMARY KEY ("id"));`,
+      'InvoiceLineItem table ensure',
+    )
+    await run(`CREATE INDEX IF NOT EXISTS "InvoiceLineItem_invoiceId_idx" ON "InvoiceLineItem"("invoiceId");`, 'InvoiceLineItem invoiceId index')
+    await run(`ALTER TABLE "InvoiceLineItem" ADD CONSTRAINT "InvoiceLineItem_invoice_fkey" FOREIGN KEY ("invoiceId") REFERENCES "Invoice"("id") ON DELETE CASCADE ON UPDATE CASCADE;`, 'InvoiceLineItem invoice FK')
+
     console.log('[DB] ensureDatabase: schema sync complete')
   }
 

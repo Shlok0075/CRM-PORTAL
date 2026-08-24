@@ -52,16 +52,20 @@ export class InvoicesService {
       })
 
       if (itemsWithHsn.length > 0) {
-        await this.prisma.invoiceLineItem.createMany({
-          data: itemsWithHsn.map((item: any) => ({
-            invoiceId: invoice.id,
-            description: item.description,
-            quantity: item.quantity,
-            unitPrice: item.unitPrice,
-            amount: item.amount,
-            hsnSac: item.hsnSac,
-          })),
-        })
+        try {
+          await this.prisma.invoiceLineItem.createMany({
+            data: itemsWithHsn.map((item: any) => ({
+              invoiceId: invoice.id,
+              description: item.description,
+              quantity: item.quantity,
+              unitPrice: item.unitPrice,
+              amount: item.amount,
+              hsnSac: item.hsnSac,
+            })),
+          })
+        } catch (lineItemErr) {
+          console.error('[INVOICES] createMany lineItems failed:', lineItemErr)
+        }
       }
 
       return this.prisma.invoice.findUnique({
