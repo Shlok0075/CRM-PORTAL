@@ -274,7 +274,7 @@ export class PortalController {
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', 'attachment; filename=my_timesheet.xlsx')
-    return buffer
+    return res.send(buffer)
   }
 
   @Get('my-attendance')

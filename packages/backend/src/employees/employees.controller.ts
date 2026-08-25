@@ -49,13 +49,13 @@ export class EmployeesController {
   }
 
   @Get('attendance/export')
-  async attendanceExport(@Req() req: any, @Query('userId') userId?: string, @Query('from') from?: string, @Query('to') to?: string, @Res({ passthrough: true }) res?: Response) {
+  async attendanceExport(@Req() req: any, @Query('userId') userId?: string, @Query('from') from?: string, @Query('to') to?: string, @Res() res?: Response) {
     const orgId = this.orgId(req)
     const wb = await this.svc.attendanceExcel(orgId, userId, from, to)
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', 'attachment; filename=attendance.xlsx')
-    return buffer
+    return res.send(buffer)
   }
 
   @Get(':id/timesheet')
@@ -69,12 +69,12 @@ export class EmployeesController {
   }
 
   @Get(':id/timesheet/export')
-  async timesheetExport(@Req() req: any, @Param('id') id: string, @Query('from') from?: string, @Query('to') to?: string, @Res({ passthrough: true }) res?: Response) {
+  async timesheetExport(@Req() req: any, @Param('id') id: string, @Query('from') from?: string, @Query('to') to?: string, @Res() res?: Response) {
     const orgId = this.orgId(req)
     const wb = await this.svc.timesheetExcel(orgId, id, from, to)
     const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
     res.setHeader('Content-Disposition', `attachment; filename=timesheet_${id}.xlsx`)
-    return buffer
+    return res.send(buffer)
   }
 }
