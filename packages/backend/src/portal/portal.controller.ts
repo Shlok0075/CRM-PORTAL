@@ -270,38 +270,53 @@ export class PortalController {
   async markMyAttendance(@Req() req: any, @Body() body: any) {
     const u = this.user(req)
     if (u.roleType !== 'employee') {
-      throw new Error('Only employees can mark attendance')
+      throw new BadRequestException('Only employees can mark attendance')
+    }
+    if (!body.date) {
+      throw new BadRequestException('Date is required')
     }
     const [year, month, day] = body.date.split('-').map(Number)
+    if (!year || !month || !day) {
+      throw new BadRequestException('Invalid date format, expected YYYY-MM-DD')
+    }
     const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
     const inTime = body.inTime ? new Date(`${body.date}T${body.inTime}:00`) : null
     const outTime = body.outTime ? new Date(`${body.date}T${body.outTime}:00`) : null
-    const attendance = await this.prisma.attendance.upsert({
-      where: { userId_date: { userId: u.sub, date } },
-      update: { inTime, outTime, status: body.status || 'present' },
-      create: { orgId: u.orgId, userId: u.sub, date, inTime, outTime, status: body.status || 'present' },
-    })
-
-    if (inTime && outTime) {
-      const durationMinutes = Math.round((outTime.getTime() - inTime.getTime()) / 60000)
-      const existingLog = await this.prisma.taskTimeLog.findFirst({
-        where: { userId: u.sub, orgId: u.orgId, startTime: inTime },
+    try {
+      const attendance = await this.prisma.attendance.upsert({
+        where: { userId_date: { userId: u.sub, date } },
+        update: { inTime, outTime, status: body.status || 'present' },
+        create: { orgId: u.orgId, userId: u.sub, date, inTime, outTime, status: body.status || 'present' },
       })
-      if (!existingLog) {
-        await this.prisma.taskTimeLog.create({
-          data: {
-            org: { connect: { id: u.orgId } },
-            userId: u.sub,
-            startTime: inTime,
-            endTime: outTime,
-            durationMinutes,
-            description: `Attendance - ${attendance.status || 'present'}`,
-          } as any,
-        })
-      }
-    }
 
-    return attendance
+      if (inTime && outTime) {
+        const durationMinutes = Math.round((outTime.getTime() - inTime.getTime()) / 60000)
+        try {
+          const existingLog = await this.prisma.taskTimeLog.findFirst({
+            where: { userId: u.sub, orgId: u.orgId, startTime: inTime },
+          })
+          if (!existingLog) {
+            await this.prisma.taskTimeLog.create({
+              data: {
+                org: { connect: { id: u.orgId } },
+                userId: u.sub,
+                startTime: inTime,
+                endTime: outTime,
+                durationMinutes,
+                description: `Attendance - ${attendance.status || 'present'}`,
+              } as any,
+            })
+          }
+        } catch (timesheetErr) {
+          console.error('TIMESHEET CREATE ERROR:', timesheetErr)
+        }
+      }
+
+      return attendance
+    } catch (err: any) {
+      console.error('MARK ATTENDANCE ERROR:', err.message, err.stack, JSON.stringify({ body, u }))
+      throw new BadRequestException('Failed to mark attendance: ' + (err.message || 'Unknown error'))
+    }
   }
 
   @Get('dashboard')
