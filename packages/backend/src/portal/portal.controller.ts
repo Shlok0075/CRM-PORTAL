@@ -171,8 +171,8 @@ export class PortalController {
         throw new BadRequestException('Invalid start time: ' + body.startTime)
       }
       const data: any = {
-        orgId: u.orgId,
-        userId: u.sub,
+        org: { connect: { id: u.orgId } },
+        user: { connect: { id: u.sub } },
         startTime,
         description: body.description || 'Manual entry',
       }
@@ -327,7 +327,7 @@ export class PortalController {
           await this.prisma.taskTimeLog.create({
             data: {
               org: { connect: { id: u.orgId } },
-              userId: u.sub,
+              user: { connect: { id: u.sub } },
               startTime: inTime,
               endTime: outTime,
               durationMinutes,
