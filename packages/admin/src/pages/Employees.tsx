@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import { UserCog, Plus, Calendar, Timer, X, RefreshCw } from 'lucide-react'
+import { UserCog, Plus, Calendar, Timer, X, RefreshCw, Download } from 'lucide-react'
 import useApi from '../hooks/useApi'
-import { apiFetch } from '../lib/api'
+import { apiFetch, API_BASE } from '../lib/api'
 
 export default function Employees() {
   const [activeTab, setActiveTab] = useState<'team' | 'attendance' | 'timesheet'>('team')
@@ -96,6 +96,48 @@ export default function Employees() {
     setSelectedTimesheetUser(userId)
   }
 
+  const handleAttendanceDownload = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/employees/attendance/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'attendance.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err.message || 'Failed to export attendance')
+    }
+  }
+
+  const handleTimesheetDownload = async () => {
+    if (!selectedTimesheetUser) {
+      alert('Please select an employee first')
+      return
+    }
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/employees/${selectedTimesheetUser}/timesheet/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `timesheet_${selectedTimesheetUser}.xlsx`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err.message || 'Failed to export timesheet')
+    }
+  }
+
   return (
     <div className="space-y-6 max-w-[1600px]">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -169,9 +211,14 @@ export default function Employees() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Attendance Records</h3>
-            <button onClick={() => { setModalType('attendance'); setShowAddModal(true); }} className="btn-primary flex items-center gap-2 text-sm py-2">
-              <Plus size={14} /> Mark Attendance
-            </button>
+            <div className="flex gap-2">
+              <button onClick={handleAttendanceDownload} className="btn-secondary flex items-center gap-2 text-sm py-2">
+                <Download size={14} /> Export Excel
+              </button>
+              <button onClick={() => { setModalType('attendance'); setShowAddModal(true); }} className="btn-primary flex items-center gap-2 text-sm py-2">
+                <Plus size={14} /> Mark Attendance
+              </button>
+            </div>
           </div>
           {attendanceLoading ? (
             <div className="flex items-center justify-center py-12">
@@ -214,16 +261,21 @@ export default function Employees() {
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="p-4 border-b border-gray-100 flex items-center justify-between">
             <h3 className="text-sm font-semibold text-gray-700">Timesheet</h3>
-            <select
-              value={selectedTimesheetUser}
-              onChange={(e) => handleTimesheetUserChange(e.target.value)}
-              className="form-input text-sm py-2 w-48"
-            >
-              <option value="">Select employee...</option>
-              {users.map((u: any) => (
-                <option key={u.id} value={u.id}>{u.name}</option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <button onClick={handleTimesheetDownload} className="btn-secondary flex items-center gap-2 text-sm py-2">
+                <Download size={14} /> Export Excel
+              </button>
+              <select
+                value={selectedTimesheetUser}
+                onChange={(e) => handleTimesheetUserChange(e.target.value)}
+                className="form-input text-sm py-2 w-48"
+              >
+                <option value="">Select employee...</option>
+                {users.map((u: any) => (
+                  <option key={u.id} value={u.id}>{u.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
           {timesheetLoading ? (
             <div className="flex items-center justify-center py-12">

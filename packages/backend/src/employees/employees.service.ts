@@ -3,6 +3,7 @@ import { PrismaService } from '../prisma.service'
 import bcrypt from 'bcryptjs'
 import { CreateEmployeeDto } from './dto/create-employee.dto'
 import { MarkAttendanceDto } from './dto/mark-attendance.dto'
+import * as XLSX from 'xlsx'
 
 @Injectable()
 export class EmployeesService {
@@ -83,7 +84,7 @@ export class EmployeesService {
     const user = await this.prisma.user.findFirst({ where: { id: userId, orgId } })
     if (!user) return []
 
-    const where: any = { userId }
+    const where: any = { userId, orgId }
     if (from || to) {
       where.startTime = {}
       if (from) where.startTime.gte = new Date(from)
@@ -91,8 +92,41 @@ export class EmployeesService {
     }
     return this.prisma.taskTimeLog.findMany({
       where,
-      include: { task: { select: { id: true, title: true } } },
+      include: { task: { select: { id: true, title: true } }, user: { select: { id: true, name: true, email: true } } },
       orderBy: { startTime: 'desc' },
     })
+  }
+
+  async attendanceExcel(orgId: string, userId?: string, from?: string, to?: string) {
+    const records = await this.getAttendance(orgId, userId, from, to)
+    const rows = records.map((r: any) => ({
+      Employee: r.user?.name || '-',
+      Email: r.user?.email || '-',
+      Date: r.date ? new Date(r.date).toLocaleDateString('en-IN') : '-',
+      'In Time': r.inTime ? new Date(r.inTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-',
+      'Out Time': r.outTime ? new Date(r.outTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-',
+      Status: r.status || '-',
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Attendance')
+    return wb
+  }
+
+  async timesheetExcel(orgId: string, userId: string, from?: string, to?: string) {
+    const logs = await this.getTimesheet(orgId, userId, from, to)
+    const rows = logs.map((l: any) => ({
+      Employee: l.user?.name || '-',
+      Email: l.user?.email || '-',
+      Task: l.task?.title || '-',
+      'Start Time': l.startTime ? new Date(l.startTime).toLocaleString('en-IN') : '-',
+      'End Time': l.endTime ? new Date(l.endTime).toLocaleString('en-IN') : '-',
+      'Duration (min)': l.durationMinutes || 0,
+      Description: l.description || '-',
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Timesheet')
+    return wb
   }
 }

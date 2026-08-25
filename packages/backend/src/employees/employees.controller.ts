@@ -1,4 +1,6 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query } from '@nestjs/common'
+import { Controller, Get, Post, Body, Patch, Param, Delete, Req, UseGuards, Query, Res, Header } from '@nestjs/common'
+import { Response } from 'express'
+import * as XLSX from 'xlsx'
 import { EmployeesService } from './employees.service'
 import { CreateEmployeeDto } from './dto/create-employee.dto'
 import { MarkAttendanceDto } from './dto/mark-attendance.dto'
@@ -46,8 +48,28 @@ export class EmployeesController {
     return this.svc.getAttendance(this.orgId(req), userId, from, to)
   }
 
+  @Get('attendance/export')
+  async attendanceExport(@Req() req: any, @Query('userId') userId?: string, @Query('from') from?: string, @Query('to') to?: string, @Res({ passthrough: true }) res?: Response) {
+    const orgId = this.orgId(req)
+    const wb = await this.svc.attendanceExcel(orgId, userId, from, to)
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', 'attachment; filename=attendance.xlsx')
+    return buffer
+  }
+
   @Get(':id/timesheet')
   getTimesheet(@Req() req: any, @Param('id') id: string, @Query('from') from?: string, @Query('to') to?: string) {
     return this.svc.getTimesheet(this.orgId(req), id, from, to)
+  }
+
+  @Get(':id/timesheet/export')
+  async timesheetExport(@Req() req: any, @Param('id') id: string, @Query('from') from?: string, @Query('to') to?: string, @Res({ passthrough: true }) res?: Response) {
+    const orgId = this.orgId(req)
+    const wb = await this.svc.timesheetExcel(orgId, id, from, to)
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', `attachment; filename=timesheet_${id}.xlsx`)
+    return buffer
   }
 }
