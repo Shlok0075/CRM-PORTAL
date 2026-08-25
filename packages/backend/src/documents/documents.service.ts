@@ -1,7 +1,6 @@
 import { Injectable, BadRequestException } from '@nestjs/common'
 import { PrismaService } from '../prisma.service'
 import { Response } from 'express'
-import archiver from 'archiver'
 
 const DOCUMENT_CATEGORIES = [
   'Financial Statements',
@@ -87,9 +86,6 @@ export class DocumentsService {
 
   async upload(orgId: string, data: any) {
     const cleaned = Object.fromEntries(Object.entries(data).filter(([, v]) => v !== null && v !== undefined)) as any
-    if (!cleaned.fileUrl && cleaned.fileName) {
-      cleaned.fileUrl = `/uploads/${Date.now()}_${cleaned.fileName}`
-    }
     return this.prisma.document.create({ data: { ...cleaned, org: { connect: { id: orgId } } } as any })
   }
 
@@ -208,7 +204,8 @@ export class DocumentsService {
     }
     res.setHeader('Content-Type', 'application/zip')
     res.setHeader('Content-Disposition', 'attachment; filename="documents.zip"')
-    const createArchive = (archiver as any).default || archiver
+    const archiverModule = await import('archiver')
+    const createArchive = (archiverModule as any).default || archiverModule
     const archive = createArchive('zip', { zlib: { level: 6 } })
     archive.on('error', (err: any) => { throw err })
     archive.pipe(res)

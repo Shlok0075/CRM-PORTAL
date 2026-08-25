@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react'
 import { Plus, X, RefreshCw, Upload, FileText, Eye, CheckCircle2, PlayCircle, XCircle, Pencil } from 'lucide-react'
 import useApi from '../hooks/useApi'
-import { apiFetch } from '../lib/api'
+import { apiFetch, API_BASE } from '../lib/api'
 
 const STATUSES = ['pending', 'ongoing', 'completed', 'cancelled']
 const STATUS_LABEL: Record<string, string> = {
@@ -134,6 +134,27 @@ export default function Events() {
       eventsApi.refetch()
     } catch (err: any) {
       alert(err.data?.message || err.message || 'Failed to delete event')
+    }
+  }
+
+  const handleDocDownload = async (doc: any) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/documents/${doc.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Download failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = doc.fileName || 'document'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err.message || 'Failed to download document')
     }
   }
 
@@ -366,8 +387,8 @@ export default function Events() {
                     {docs.map((d: any) => (
                       <div key={d.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
                         <FileText size={18} className="text-gray-500" />
-                        <a href={d.fileUrl} target="_blank" rel="noreferrer" className="text-sm text-blue-600 hover:underline flex-1 truncate">{d.fileName}</a>
-                        <span className="text-xs text-gray-400">{(d.fileSize / 1024).toFixed(0)} KB</span>
+                        <span className="text-sm text-gray-700 flex-1 truncate">{d.fileName}</span>
+                        <button onClick={() => handleDocDownload(d)} className="text-xs text-blue-600 hover:text-blue-700 font-medium">Download</button>
                       </div>
                     ))}
                   </div>
