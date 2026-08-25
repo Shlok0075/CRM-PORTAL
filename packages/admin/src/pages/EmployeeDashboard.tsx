@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
-import { CheckSquare, Clock, AlertTriangle, Award, Timer, TrendingUp, Download, Calendar } from 'lucide-react'
+import { CheckSquare, Clock, AlertTriangle, Award, Timer, TrendingUp, Download, Calendar, Plus, X } from 'lucide-react'
 import useApi from '../hooks/useApi'
-import { API_BASE } from '../lib/api'
+import { apiFetch, API_BASE } from '../lib/api'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 
 export default function EmployeeDashboard() {
@@ -49,6 +49,33 @@ export default function EmployeeDashboard() {
       URL.revokeObjectURL(url)
     } catch (err: any) {
       alert(err.message || 'Failed to export timesheet')
+    }
+  }
+
+  const [showMarkAttendance, setShowMarkAttendance] = useState(false)
+  const [markSubmitting, setMarkSubmitting] = useState(false)
+
+  const handleMarkMyAttendance = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setMarkSubmitting(true)
+    try {
+      const form = e.target as HTMLFormElement
+      const formData = new FormData(form)
+      await apiFetch('/portal/my-attendance', {
+        method: 'POST',
+        body: JSON.stringify({
+          date: formData.get('date') as string,
+          inTime: formData.get('inTime') as string || undefined,
+          outTime: formData.get('outTime') as string || undefined,
+          status: formData.get('status') as string || 'present',
+        }),
+      })
+      setShowMarkAttendance(false)
+      attendanceApi.refetch()
+    } catch (err: any) {
+      alert(err.data?.message || err.message || 'Failed to mark attendance')
+    } finally {
+      setMarkSubmitting(false)
     }
   }
 
@@ -196,9 +223,14 @@ export default function EmployeeDashboard() {
               <div className="p-2 bg-blue-50 rounded-lg"><Calendar size={18} className="text-blue-600" /></div>
               My Attendance
             </h3>
-            <button onClick={handleTimesheetDownload} className="btn-secondary flex items-center gap-2 text-sm py-2">
-              <Download size={14} /> Export Excel
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setShowMarkAttendance(true)} className="btn-primary flex items-center gap-2 text-sm py-2">
+                <Plus size={14} /> Mark Attendance
+              </button>
+              <button onClick={handleTimesheetDownload} className="btn-secondary flex items-center gap-2 text-sm py-2">
+                <Download size={14} /> Export Excel
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -261,6 +293,47 @@ export default function EmployeeDashboard() {
           ))}
         </div>
       </div>
+
+      {showMarkAttendance && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">Mark Attendance</h3>
+              <button onClick={() => setShowMarkAttendance(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleMarkMyAttendance}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="form-label">Date</label>
+                  <input name="date" type="date" className="form-input" required />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">In Time</label>
+                    <input name="inTime" type="time" className="form-input" />
+                  </div>
+                  <div>
+                    <label className="form-label">Out Time</label>
+                    <input name="outTime" type="time" className="form-input" />
+                  </div>
+                </div>
+                <div>
+                  <label className="form-label">Status</label>
+                  <select name="status" className="form-input">
+                    <option value="present">Present</option>
+                    <option value="absent">Absent</option>
+                    <option value="half-day">Half Day</option>
+                  </select>
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" disabled={markSubmitting} className="btn-primary flex-1 disabled:opacity-50">{markSubmitting ? 'Saving...' : 'Mark Attendance'}</button>
+                  <button type="button" onClick={() => setShowMarkAttendance(false)} className="btn-secondary flex-1">Cancel</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {debug && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
