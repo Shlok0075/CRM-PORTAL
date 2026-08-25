@@ -1,16 +1,21 @@
 import { useState } from 'react'
-import { CheckSquare, Clock, AlertTriangle, Award, Timer, TrendingUp } from 'lucide-react'
+import { CheckSquare, Clock, AlertTriangle, Award, Timer, TrendingUp, Download, Calendar } from 'lucide-react'
 import useApi from '../hooks/useApi'
+import { API_BASE } from '../lib/api'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
 
 export default function EmployeeDashboard() {
   const dashboardApi = useApi('/portal/dashboard')
   const tasksApi = useApi('/portal/my-tasks?limit=50')
+  const timesheetApi = useApi('/portal/my-timesheet')
+  const attendanceApi = useApi('/portal/my-attendance')
 
   const dashboard = dashboardApi.data || {}
   const tasks = tasksApi.data?.items || tasksApi.data || []
+  const timesheets = timesheetApi.data || []
+  const attendance = attendanceApi.data?.data || attendanceApi.data || []
 
-  const loading = dashboardApi.loading || tasksApi.loading
+  const loading = dashboardApi.loading || tasksApi.loading || timesheetApi.loading || attendanceApi.loading
   const error = dashboardApi.error || tasksApi.error
 
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'overdue'>('all')
@@ -27,6 +32,25 @@ export default function EmployeeDashboard() {
     if (activeTab === 'overdue') return t.isOverdue || t.status === 'overdue'
     return true
   })
+
+  const handleTimesheetDownload = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/portal/my-timesheet/export`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Export failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = 'my_timesheet.xlsx'
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err.message || 'Failed to export timesheet')
+    }
+  }
 
   if (loading) return (
     <div className="flex items-center justify-center h-96">
@@ -145,6 +169,61 @@ export default function EmployeeDashboard() {
               </ResponsiveContainer>
             </div>
           )}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <div className="p-2 bg-blue-50 rounded-lg"><Calendar size={18} className="text-blue-600" /></div>
+              My Attendance
+            </h3>
+            <button onClick={handleTimesheetDownload} className="btn-secondary flex items-center gap-2 text-sm py-2">
+              <Download size={14} /> Export Excel
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead><tr className="border-b border-gray-100"><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">In Time</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Out Time</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th></tr></thead>
+              <tbody className="divide-y divide-gray-50">
+                {attendance.length === 0 ? <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400 text-sm">No attendance records yet</td></tr> : attendance.slice(0, 10).map((att: any) => (
+                  <tr key={att.id} className="hover:bg-gray-50/50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{att.date ? new Date(att.date).toLocaleDateString('en-IN') : '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{att.inTime ? new Date(att.inTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{att.outTime ? new Date(att.outTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }) : '-'}</td>
+                    <td className="px-4 py-3"><span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium ${att.status === 'present' ? 'bg-emerald-50 text-emerald-700' : att.status === 'absent' ? 'bg-red-50 text-red-700' : 'bg-amber-50 text-amber-700'}`}>{att.status}</span></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-bold text-gray-900 flex items-center gap-2">
+              <div className="p-2 bg-emerald-50 rounded-lg"><Timer size={18} className="text-emerald-600" /></div>
+              My Timesheet
+            </h3>
+            <button onClick={handleTimesheetDownload} className="btn-secondary flex items-center gap-2 text-sm py-2">
+              <Download size={14} /> Export Excel
+            </button>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead><tr className="border-b border-gray-100"><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Task</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Duration</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th></tr></thead>
+              <tbody className="divide-y divide-gray-50">
+                {timesheets.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400 text-sm">No timesheet entries yet</td></tr> : timesheets.slice(0, 10).map((log: any) => (
+                  <tr key={log.id} className="hover:bg-gray-50/50">
+                    <td className="px-4 py-3 text-sm text-gray-900">{log.task?.title || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{log.durationMinutes ? `${Math.floor(log.durationMinutes / 60)}h ${log.durationMinutes % 60}m` : '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{log.startTime ? new Date(log.startTime).toLocaleDateString('en-IN') : '-'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 

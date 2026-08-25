@@ -63,6 +63,11 @@ export class EmployeesController {
     return this.svc.getTimesheet(this.orgId(req), id, from, to)
   }
 
+  @Get(':id/timesheet/combined')
+  getCombinedTimesheet(@Req() req: any, @Param('id') id: string, @Query('from') from?: string, @Query('to') to?: string) {
+    return this.svc.combinedTimesheet(this.orgId(req), id, from, to)
+  }
+
   @Get(':id/timesheet/export')
   async timesheetExport(@Req() req: any, @Param('id') id: string, @Query('from') from?: string, @Query('to') to?: string, @Res({ passthrough: true }) res?: Response) {
     const orgId = this.orgId(req)

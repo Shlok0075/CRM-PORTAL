@@ -54,9 +54,10 @@ export class EmployeesService {
     const user = await this.prisma.user.findFirst({ where: { id: dto.userId, orgId } })
     if (!user) throw new Error('User not found')
 
-    const date = new Date(dto.date)
-    const inTime = dto.inTime ? new Date(`${dto.date}T${dto.inTime}`) : null
-    const outTime = dto.outTime ? new Date(`${dto.date}T${dto.outTime}`) : null
+    const [year, month, day] = dto.date.split('-').map(Number)
+    const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
+    const inTime = dto.inTime ? new Date(`${dto.date}T${dto.inTime}:00`) : null
+    const outTime = dto.outTime ? new Date(`${dto.date}T${dto.outTime}:00`) : null
 
     return this.prisma.attendance.upsert({
       where: { userId_date: { userId: dto.userId, date } },
@@ -70,8 +71,14 @@ export class EmployeesService {
     if (userId) where.userId = userId
     if (from || to) {
       where.date = {}
-      if (from) where.date.gte = new Date(from)
-      if (to) where.date.lte = new Date(to)
+      if (from) {
+        const [fy, fm, fd] = from.split('-').map(Number)
+        where.date.gte = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0))
+      }
+      if (to) {
+        const [ty, tm, td] = to.split('-').map(Number)
+        where.date.lte = new Date(Date.UTC(ty, tm - 1, td, 23, 59, 59))
+      }
     }
     return this.prisma.attendance.findMany({
       where,
@@ -115,7 +122,11 @@ export class EmployeesService {
 
   async timesheetExcel(orgId: string, userId: string, from?: string, to?: string) {
     const logs = await this.getTimesheet(orgId, userId, from, to)
-    const rows = logs.map((l: any) => ({
+    const attendance = await this.getAttendance(orgId, userId, from, to)
+    const wb = XLSX.utils.book_new()
+
+    const timeRows = logs.map((l: any) => ({
+      Type: 'Task Time Log',
       Employee: l.user?.name || '-',
       Email: l.user?.email || '-',
       Task: l.task?.title || '-',
@@ -124,9 +135,48 @@ export class EmployeesService {
       'Duration (min)': l.durationMinutes || 0,
       Description: l.description || '-',
     }))
-    const ws = XLSX.utils.json_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
+    const attRows = attendance.map((r: any) => ({
+      Type: 'Attendance',
+      Employee: r.user?.name || '-',
+      Email: r.user?.email || '-',
+      Task: '-',
+      'Start Time': r.inTime ? new Date(r.inTime).toLocaleString('en-IN') : '-',
+      'End Time': r.outTime ? new Date(r.outTime).toLocaleString('en-IN') : '-',
+      'Duration (min)': r.inTime && r.outTime ? Math.round((new Date(r.outTime).getTime() - new Date(r.inTime).getTime()) / 60000) : 0,
+      Description: r.status || '-',
+    }))
+    const allRows = [...timeRows, ...attRows]
+    const ws = XLSX.utils.json_to_sheet(allRows)
     XLSX.utils.book_append_sheet(wb, ws, 'Timesheet')
     return wb
+  }
+
+  async combinedTimesheet(orgId: string, userId: string, from?: string, to?: string) {
+    const logs = await this.getTimesheet(orgId, userId, from, to)
+    const attendance = await this.getAttendance(orgId, userId, from, to)
+
+    const timeLogs = logs.map((l: any) => ({
+      id: l.id,
+      type: 'task' as const,
+      date: l.startTime ? new Date(l.startTime).toISOString().split('T')[0] : '-',
+      startTime: l.startTime ? new Date(l.startTime).toLocaleString('en-IN') : '-',
+      endTime: l.endTime ? new Date(l.endTime).toLocaleString('en-IN') : '-',
+      durationMinutes: l.durationMinutes || 0,
+      description: l.task?.title || '-',
+      status: l.endTime ? 'completed' : 'in_progress',
+    }))
+
+    const attLogs = attendance.map((r: any) => ({
+      id: r.id,
+      type: 'attendance' as const,
+      date: r.date ? new Date(r.date).toISOString().split('T')[0] : '-',
+      startTime: r.inTime ? new Date(r.inTime).toLocaleString('en-IN') : '-',
+      endTime: r.outTime ? new Date(r.outTime).toLocaleString('en-IN') : '-',
+      durationMinutes: r.inTime && r.outTime ? Math.round((new Date(r.outTime).getTime() - new Date(r.inTime).getTime()) / 60000) : 0,
+      description: r.status || '-',
+      status: r.status,
+    }))
+
+    return [...timeLogs, ...attLogs].sort((a, b) => (b.date || '').localeCompare(a.date || ''))
   }
 }

@@ -1,6 +1,8 @@
-import { Controller, Get, Req, UseGuards, Query, Param, Post, Body, Patch, Delete, BadRequestException } from '@nestjs/common'
+import { Controller, Get, Req, UseGuards, Query, Param, Post, Body, Patch, Delete, BadRequestException, Res } from '@nestjs/common'
+import { Response } from 'express'
 import { JwtGuard } from '../auth/jwt.guard'
 import { PrismaService } from '../prisma.service'
+import * as XLSX from 'xlsx'
 
 @Controller('portal')
 @UseGuards(JwtGuard)
@@ -145,7 +147,7 @@ export class PortalController {
     if (u.roleType !== 'employee') {
       return []
     }
-    const where: any = { userId: u.sub }
+    const where: any = { userId: u.sub, orgId: u.orgId }
     if (from || to) {
       where.startTime = {}
       if (from) where.startTime.gte = new Date(from)
@@ -154,17 +156,65 @@ export class PortalController {
     return this.prisma.taskTimeLog.findMany({ where, include: { task: { select: { id: true, title: true } } }, orderBy: { startTime: 'desc' } })
   }
 
+  @Get('my-timesheet/export')
+  async myTimesheetExport(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Res({ passthrough: true }) res?: Response) {
+    const u = this.user(req)
+    if (u.roleType !== 'employee') {
+      throw new Error('Only employees can export timesheet')
+    }
+    const [logs, attendance] = await Promise.all([
+      this.prisma.taskTimeLog.findMany({
+        where: { userId: u.sub, orgId: u.orgId, ...(from || to ? { startTime: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}) },
+        include: { task: { select: { id: true, title: true } } },
+        orderBy: { startTime: 'desc' },
+      }),
+      this.prisma.attendance.findMany({
+        where: { userId: u.sub, orgId: u.orgId, ...(from || to ? { date: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } } : {}) },
+        orderBy: { date: 'desc' },
+      }),
+    ])
+
+    const timeRows = logs.map((l: any) => ({
+      Type: 'Task Time Log',
+      Description: l.task?.title || '-',
+      'Start Time': l.startTime ? new Date(l.startTime).toLocaleString('en-IN') : '-',
+      'End Time': l.endTime ? new Date(l.endTime).toLocaleString('en-IN') : '-',
+      'Duration (min)': l.durationMinutes || 0,
+    }))
+    const attRows = attendance.map((r: any) => ({
+      Type: 'Attendance',
+      Description: r.status || '-',
+      'Start Time': r.inTime ? new Date(r.inTime).toLocaleString('en-IN') : '-',
+      'End Time': r.outTime ? new Date(r.outTime).toLocaleString('en-IN') : '-',
+      'Duration (min)': r.inTime && r.outTime ? Math.round((new Date(r.outTime).getTime() - new Date(r.inTime).getTime()) / 60000) : 0,
+    }))
+    const allRows = [...timeRows, ...attRows]
+    const ws = XLSX.utils.json_to_sheet(allRows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, 'Timesheet')
+    const buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' })
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    res.setHeader('Content-Disposition', 'attachment; filename=my_timesheet.xlsx')
+    return buffer
+  }
+
   @Get('my-attendance')
   async myAttendance(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string) {
     const u = this.user(req)
     if (u.roleType !== 'employee') {
       return []
     }
-    const where: any = { userId: u.sub }
+    const where: any = { userId: u.sub, orgId: u.orgId }
     if (from || to) {
       where.date = {}
-      if (from) where.date.gte = new Date(from)
-      if (to) where.date.lte = new Date(to)
+      if (from) {
+        const [fy, fm, fd] = from.split('-').map(Number)
+        where.date.gte = new Date(Date.UTC(fy, fm - 1, fd, 0, 0, 0))
+      }
+      if (to) {
+        const [ty, tm, td] = to.split('-').map(Number)
+        where.date.lte = new Date(Date.UTC(ty, tm - 1, td, 23, 59, 59))
+      }
     }
     return this.prisma.attendance.findMany({ where, orderBy: { date: 'desc' } })
   }
@@ -175,9 +225,10 @@ export class PortalController {
     if (u.roleType !== 'employee') {
       throw new Error('Only employees can mark attendance')
     }
-    const date = new Date(body.date)
-    const inTime = body.inTime ? new Date(`${body.date}T${body.inTime}`) : null
-    const outTime = body.outTime ? new Date(`${body.date}T${body.outTime}`) : null
+    const [year, month, day] = body.date.split('-').map(Number)
+    const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
+    const inTime = body.inTime ? new Date(`${body.date}T${body.inTime}:00`) : null
+    const outTime = body.outTime ? new Date(`${body.date}T${body.outTime}:00`) : null
     return this.prisma.attendance.upsert({
       where: { userId_date: { userId: u.sub, date } },
       update: { inTime, outTime, status: body.status || 'present' },
