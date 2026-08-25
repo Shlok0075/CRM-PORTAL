@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { CheckSquare, Clock, AlertTriangle, Award, Timer, TrendingUp, Download, Calendar } from 'lucide-react'
 import useApi from '../hooks/useApi'
 import { API_BASE } from '../lib/api'
@@ -16,7 +16,7 @@ export default function EmployeeDashboard() {
   const attendance = attendanceApi.data?.data || attendanceApi.data || []
 
   const loading = dashboardApi.loading || tasksApi.loading || timesheetApi.loading || attendanceApi.loading
-  const error = dashboardApi.error || tasksApi.error
+  const error = dashboardApi.error || tasksApi.error || timesheetApi.error || attendanceApi.error
 
   const [activeTab, setActiveTab] = useState<'all' | 'pending' | 'overdue'>('all')
 
@@ -51,6 +51,23 @@ export default function EmployeeDashboard() {
       alert(err.message || 'Failed to export timesheet')
     }
   }
+
+  const [debug, setDebug] = useState<any>(null)
+
+  useEffect(() => {
+    console.log('EmployeeDashboard API states:', {
+      dashboard: { loading: dashboardApi.loading, error: dashboardApi.error, data: dashboardApi.data },
+      tasks: { loading: tasksApi.loading, error: tasksApi.error, count: tasks.length },
+      timesheet: { loading: timesheetApi.loading, error: timesheetApi.error, data: timesheetApi.data },
+      attendance: { loading: attendanceApi.loading, error: attendanceApi.error, data: attendanceApi.data },
+    })
+    setDebug({
+      dashboard: dashboardApi.data,
+      tasks: tasksApi.data,
+      timesheet: timesheetApi.data,
+      attendance: attendanceApi.data,
+    })
+  }, [dashboardApi.data, tasksApi.data, timesheetApi.data, attendanceApi.data, dashboardApi.loading, tasksApi.loading, timesheetApi.loading, attendanceApi.loading])
 
   if (loading) return (
     <div className="flex items-center justify-center h-96">
@@ -244,6 +261,13 @@ export default function EmployeeDashboard() {
           ))}
         </div>
       </div>
+
+      {debug && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Debug Info (API Responses)</h3>
+          <pre className="text-xs bg-gray-50 p-4 rounded-xl overflow-auto max-h-64 border border-gray-100">{JSON.stringify(debug, null, 2)}</pre>
+        </div>
+      )}
     </div>
   )
 }
