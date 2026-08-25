@@ -163,26 +163,40 @@ export class PortalController {
       if (!u || u.roleType !== 'employee') {
         throw new BadRequestException('Only employees can create timesheet entries')
       }
-      if (!body?.startTime) {
-        throw new BadRequestException('Start time is required')
+
+      let startTime: Date | null = null
+      let endTime: Date | null = null
+
+      if (body.startTime) {
+        const parsed = new Date(body.startTime)
+        if (!isNaN(parsed.getTime())) {
+          startTime = parsed
+        }
       }
-      const startTime = new Date(body.startTime)
-      if (isNaN(startTime.getTime())) {
-        throw new BadRequestException('Invalid start time: ' + body.startTime)
+
+      if (!startTime) {
+        throw new BadRequestException('Start time is required and must be a valid date')
       }
+
+      if (body.endTime) {
+        const parsedEnd = new Date(body.endTime)
+        if (!isNaN(parsedEnd.getTime())) {
+          endTime = parsedEnd
+        }
+      }
+
       const data: any = {
         org: { connect: { id: u.orgId } },
         user: { connect: { id: u.sub } },
         startTime,
         description: body.description || 'Manual entry',
       }
-      if (body.endTime) {
-        const endTime = new Date(body.endTime)
-        if (!isNaN(endTime.getTime())) {
-          data.endTime = endTime
-          data.durationMinutes = body.durationMinutes ? Number(body.durationMinutes) : Math.round((endTime.getTime() - startTime.getTime()) / 60000)
-        }
+
+      if (endTime) {
+        data.endTime = endTime
+        data.durationMinutes = body.durationMinutes ? Number(body.durationMinutes) : Math.round((endTime.getTime() - startTime.getTime()) / 60000)
       }
+
       const log = await this.prisma.taskTimeLog.create({ data: data as any })
       return log
     } catch (err: any) {
