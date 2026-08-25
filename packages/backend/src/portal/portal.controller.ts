@@ -282,41 +282,47 @@ export class PortalController {
     const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
     const inTime = body.inTime ? new Date(`${body.date}T${body.inTime}:00`) : null
     const outTime = body.outTime ? new Date(`${body.date}T${body.outTime}:00`) : null
-    try {
-      const attendance = await this.prisma.attendance.upsert({
-        where: { userId_date: { userId: u.sub, date } },
-        update: { inTime, outTime, status: body.status || 'present' },
-        create: { orgId: u.orgId, userId: u.sub, date, inTime, outTime, status: body.status || 'present' },
+
+    const existing = await this.prisma.attendance.findFirst({
+      where: { userId: u.sub, date },
+    })
+
+    let attendance
+    if (existing) {
+      attendance = await this.prisma.attendance.update({
+        where: { id: existing.id },
+        data: { inTime, outTime, status: body.status || 'present' },
       })
-
-      if (inTime && outTime) {
-        const durationMinutes = Math.round((outTime.getTime() - inTime.getTime()) / 60000)
-        try {
-          const existingLog = await this.prisma.taskTimeLog.findFirst({
-            where: { userId: u.sub, orgId: u.orgId, startTime: inTime },
-          })
-          if (!existingLog) {
-            await this.prisma.taskTimeLog.create({
-              data: {
-                org: { connect: { id: u.orgId } },
-                userId: u.sub,
-                startTime: inTime,
-                endTime: outTime,
-                durationMinutes,
-                description: `Attendance - ${attendance.status || 'present'}`,
-              } as any,
-            })
-          }
-        } catch (timesheetErr) {
-          console.error('TIMESHEET CREATE ERROR:', timesheetErr)
-        }
-      }
-
-      return attendance
-    } catch (err: any) {
-      console.error('MARK ATTENDANCE ERROR:', err.message, err.stack, JSON.stringify({ body, u }))
-      throw new BadRequestException('Failed to mark attendance: ' + (err.message || 'Unknown error'))
+    } else {
+      attendance = await this.prisma.attendance.create({
+        data: { orgId: u.orgId, userId: u.sub, date, inTime, outTime, status: body.status || 'present' },
+      })
     }
+
+    if (inTime && outTime) {
+      const durationMinutes = Math.round((outTime.getTime() - inTime.getTime()) / 60000)
+      try {
+        const existingLog = await this.prisma.taskTimeLog.findFirst({
+          where: { userId: u.sub, orgId: u.orgId, startTime: inTime },
+        })
+        if (!existingLog) {
+          await this.prisma.taskTimeLog.create({
+            data: {
+              org: { connect: { id: u.orgId } },
+              userId: u.sub,
+              startTime: inTime,
+              endTime: outTime,
+              durationMinutes,
+              description: `Attendance - ${attendance.status || 'present'}`,
+            } as any,
+          })
+        }
+      } catch (timesheetErr) {
+        console.error('TIMESHEET CREATE ERROR:', timesheetErr)
+      }
+    }
+
+    return attendance
   }
 
   @Get('dashboard')
