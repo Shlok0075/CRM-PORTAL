@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { CheckSquare, Clock, AlertTriangle, Award, Timer, TrendingUp, Download, Calendar, Plus, X } from 'lucide-react'
+import { CheckSquare, Clock, AlertTriangle, Award, Timer, TrendingUp, Download, Calendar, Plus, X, Edit2 } from 'lucide-react'
 import useApi from '../hooks/useApi'
 import { apiFetch, API_BASE } from '../lib/api'
 import { ResponsiveContainer, PieChart, Pie, Cell, Tooltip } from 'recharts'
@@ -72,10 +72,76 @@ export default function EmployeeDashboard() {
       })
       setShowMarkAttendance(false)
       attendanceApi.refetch()
+      timesheetApi.refetch()
     } catch (err: any) {
       alert(err.data?.message || err.message || 'Failed to mark attendance')
     } finally {
       setMarkSubmitting(false)
+    }
+  }
+
+  const [showAddTimesheet, setShowAddTimesheet] = useState(false)
+  const [editingTimesheet, setEditingTimesheet] = useState<any>(null)
+  const [timesheetSubmitting, setTimesheetSubmitting] = useState(false)
+
+  const handleAddTimesheet = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setTimesheetSubmitting(true)
+    try {
+      const form = e.target as HTMLFormElement
+      const formData = new FormData(form)
+      await apiFetch('/portal/my-timesheet', {
+        method: 'POST',
+        body: JSON.stringify({
+          startTime: formData.get('startTime') as string,
+          endTime: formData.get('endTime') as string || undefined,
+          description: formData.get('description') as string || 'Manual entry',
+          durationMinutes: formData.get('durationMinutes') as string || undefined,
+        }),
+      })
+      setShowAddTimesheet(false)
+      timesheetApi.refetch()
+    } catch (err: any) {
+      alert(err.data?.message || err.message || 'Failed to add timesheet entry')
+    } finally {
+      setTimesheetSubmitting(false)
+    }
+  }
+
+  const handleEditTimesheet = (log: any) => {
+    setEditingTimesheet({ ...log, startTime: log.startTime ? new Date(log.startTime).toISOString().slice(0, 16) : '', endTime: log.endTime ? new Date(log.endTime).toISOString().slice(0, 16) : '' })
+  }
+
+  const handleUpdateTimesheet = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!editingTimesheet) return
+    setTimesheetSubmitting(true)
+    try {
+      await apiFetch(`/portal/my-timesheet/${editingTimesheet.id}`, {
+        method: 'PATCH',
+        body: JSON.stringify({
+          startTime: editingTimesheet.startTime,
+          endTime: editingTimesheet.endTime || undefined,
+          description: editingTimesheet.description,
+          durationMinutes: editingTimesheet.durationMinutes || undefined,
+        }),
+      })
+      setEditingTimesheet(null)
+      timesheetApi.refetch()
+    } catch (err: any) {
+      alert(err.data?.message || err.message || 'Failed to update timesheet entry')
+    } finally {
+      setTimesheetSubmitting(false)
+    }
+  }
+
+  const handleDeleteTimesheet = async (id: string) => {
+    if (!confirm('Delete this timesheet entry?')) return
+    try {
+      await apiFetch(`/portal/my-timesheet/${id}`, { method: 'DELETE' })
+      timesheetApi.refetch()
+    } catch (err: any) {
+      alert(err.data?.message || err.message || 'Failed to delete timesheet entry')
     }
   }
 
@@ -255,19 +321,29 @@ export default function EmployeeDashboard() {
               <div className="p-2 bg-emerald-50 rounded-lg"><Timer size={18} className="text-emerald-600" /></div>
               My Timesheet
             </h3>
-            <button onClick={handleTimesheetDownload} className="btn-secondary flex items-center gap-2 text-sm py-2">
-              <Download size={14} /> Export Excel
-            </button>
+            <div className="flex gap-2">
+              <button onClick={() => setShowAddTimesheet(true)} className="btn-primary flex items-center gap-2 text-sm py-2">
+                <Plus size={14} /> Add Entry
+              </button>
+              <button onClick={handleTimesheetDownload} className="btn-secondary flex items-center gap-2 text-sm py-2">
+                <Download size={14} /> Export Excel
+              </button>
+            </div>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead><tr className="border-b border-gray-100"><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Task</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Duration</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Date</th></tr></thead>
+              <thead><tr className="border-b border-gray-100"><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Description</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Start Time</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">End Time</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Duration</th><th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Actions</th></tr></thead>
               <tbody className="divide-y divide-gray-50">
-                {timesheets.length === 0 ? <tr><td colSpan={3} className="px-4 py-8 text-center text-gray-400 text-sm">No timesheet entries yet</td></tr> : timesheets.slice(0, 10).map((log: any) => (
+                {timesheets.length === 0 ? <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400 text-sm">No timesheet entries yet. Mark attendance or add entries manually.</td></tr> : timesheets.slice(0, 20).map((log: any) => (
                   <tr key={log.id} className="hover:bg-gray-50/50">
-                    <td className="px-4 py-3 text-sm text-gray-900">{log.task?.title || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-900">{log.description || log.task?.title || '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{log.startTime ? new Date(log.startTime).toLocaleString('en-IN') : '-'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-600">{log.endTime ? new Date(log.endTime).toLocaleString('en-IN') : '-'}</td>
                     <td className="px-4 py-3 text-sm text-gray-600">{log.durationMinutes ? `${Math.floor(log.durationMinutes / 60)}h ${log.durationMinutes % 60}m` : '-'}</td>
-                    <td className="px-4 py-3 text-sm text-gray-600">{log.startTime ? new Date(log.startTime).toLocaleDateString('en-IN') : '-'}</td>
+                    <td className="px-4 py-3 text-sm">
+                      <button onClick={() => handleEditTimesheet(log)} className="text-blue-600 hover:text-blue-700 mr-2"><Edit2 size={14} /></button>
+                      <button onClick={async () => { await handleDeleteTimesheet(log.id); timesheetApi.refetch(); }} className="text-red-600 hover:text-red-700"><X size={14} /></button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -328,6 +404,68 @@ export default function EmployeeDashboard() {
                 <div className="flex gap-3 pt-2">
                   <button type="submit" disabled={markSubmitting} className="btn-primary flex-1 disabled:opacity-50">{markSubmitting ? 'Saving...' : 'Mark Attendance'}</button>
                   <button type="button" onClick={() => setShowMarkAttendance(false)} className="btn-secondary flex-1">Cancel</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showAddTimesheet && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">Add Timesheet Entry</h3>
+              <button onClick={() => setShowAddTimesheet(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleAddTimesheet}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="form-label">Start Time</label>
+                  <input name="startTime" type="datetime-local" className="form-input" required />
+                </div>
+                <div>
+                  <label className="form-label">End Time</label>
+                  <input name="endTime" type="datetime-local" className="form-input" />
+                </div>
+                <div>
+                  <label className="form-label">Description</label>
+                  <input name="description" type="text" className="form-input" placeholder="e.g., Worked on client returns" />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" disabled={timesheetSubmitting} className="btn-primary flex-1 disabled:opacity-50">{timesheetSubmitting ? 'Saving...' : 'Add Entry'}</button>
+                  <button type="button" onClick={() => setShowAddTimesheet(false)} className="btn-secondary flex-1">Cancel</button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {editingTimesheet && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-xl w-full">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-xl font-bold text-gray-900">Edit Timesheet Entry</h3>
+              <button onClick={() => setEditingTimesheet(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X size={20} /></button>
+            </div>
+            <form onSubmit={handleUpdateTimesheet}>
+              <div className="p-6 space-y-4">
+                <div>
+                  <label className="form-label">Start Time</label>
+                  <input name="startTime" type="datetime-local" className="form-input" value={editingTimesheet.startTime || ''} onChange={(e) => setEditingTimesheet({ ...editingTimesheet, startTime: e.target.value })} required />
+                </div>
+                <div>
+                  <label className="form-label">End Time</label>
+                  <input name="endTime" type="datetime-local" className="form-input" value={editingTimesheet.endTime || ''} onChange={(e) => setEditingTimesheet({ ...editingTimesheet, endTime: e.target.value })} />
+                </div>
+                <div>
+                  <label className="form-label">Description</label>
+                  <input name="description" type="text" className="form-input" value={editingTimesheet.description || ''} onChange={(e) => setEditingTimesheet({ ...editingTimesheet, description: e.target.value })} />
+                </div>
+                <div className="flex gap-3 pt-2">
+                  <button type="submit" disabled={timesheetSubmitting} className="btn-primary flex-1 disabled:opacity-50">{timesheetSubmitting ? 'Saving...' : 'Save Changes'}</button>
+                  <button type="button" onClick={() => setEditingTimesheet(null)} className="btn-secondary flex-1">Cancel</button>
                 </div>
               </div>
             </form>

@@ -156,6 +156,53 @@ export class PortalController {
     return this.prisma.taskTimeLog.findMany({ where, include: { task: { select: { id: true, title: true } } }, orderBy: { startTime: 'desc' } })
   }
 
+  @Post('my-timesheet')
+  async createMyTimesheet(@Req() req: any, @Body() body: any) {
+    const u = this.user(req)
+    if (u.roleType !== 'employee') {
+      throw new Error('Only employees can create timesheet entries')
+    }
+    const data: any = {
+      org: { connect: { id: u.orgId } },
+      userId: u.sub,
+      startTime: new Date(body.startTime),
+      description: body.description || 'Manual entry',
+    }
+    if (body.endTime) data.endTime = new Date(body.endTime)
+    if (body.durationMinutes) data.durationMinutes = Number(body.durationMinutes)
+    else if (body.endTime) data.durationMinutes = Math.round((new Date(body.endTime).getTime() - new Date(body.startTime).getTime()) / 60000)
+    return this.prisma.taskTimeLog.create({ data: data as any })
+  }
+
+  @Patch('my-timesheet/:id')
+  async updateMyTimesheet(@Req() req: any, @Param('id') id: string, @Body() body: any) {
+    const u = this.user(req)
+    if (u.roleType !== 'employee') {
+      throw new Error('Only employees can update timesheet entries')
+    }
+    const log = await this.prisma.taskTimeLog.findFirst({ where: { id, userId: u.sub, orgId: u.orgId } })
+    if (!log) throw new Error('Timesheet entry not found')
+    const data: any = {}
+    if (body.startTime) data.startTime = new Date(body.startTime)
+    if (body.endTime) data.endTime = new Date(body.endTime)
+    if (body.description !== undefined) data.description = body.description
+    if (body.durationMinutes !== undefined) data.durationMinutes = Number(body.durationMinutes)
+    else if (body.endTime && data.startTime) data.durationMinutes = Math.round((new Date(body.endTime).getTime() - new Date(data.startTime || log.startTime).getTime()) / 60000)
+    return this.prisma.taskTimeLog.update({ where: { id }, data })
+  }
+
+  @Delete('my-timesheet/:id')
+  async deleteMyTimesheet(@Req() req: any, @Param('id') id: string) {
+    const u = this.user(req)
+    if (u.roleType !== 'employee') {
+      throw new Error('Only employees can delete timesheet entries')
+    }
+    const log = await this.prisma.taskTimeLog.findFirst({ where: { id, userId: u.sub, orgId: u.orgId } })
+    if (!log) throw new Error('Timesheet entry not found')
+    await this.prisma.taskTimeLog.delete({ where: { id } })
+    return { id }
+  }
+
   @Get('my-timesheet/export')
   async myTimesheetExport(@Req() req: any, @Query('from') from?: string, @Query('to') to?: string, @Res({ passthrough: true }) res?: Response) {
     const u = this.user(req)
@@ -229,11 +276,32 @@ export class PortalController {
     const date = new Date(Date.UTC(year, month - 1, day, 0, 0, 0))
     const inTime = body.inTime ? new Date(`${body.date}T${body.inTime}:00`) : null
     const outTime = body.outTime ? new Date(`${body.date}T${body.outTime}:00`) : null
-    return this.prisma.attendance.upsert({
+    const attendance = await this.prisma.attendance.upsert({
       where: { userId_date: { userId: u.sub, date } },
       update: { inTime, outTime, status: body.status || 'present' },
       create: { orgId: u.orgId, userId: u.sub, date, inTime, outTime, status: body.status || 'present' },
     })
+
+    if (inTime && outTime) {
+      const durationMinutes = Math.round((outTime.getTime() - inTime.getTime()) / 60000)
+      const existingLog = await this.prisma.taskTimeLog.findFirst({
+        where: { userId: u.sub, orgId: u.orgId, startTime: inTime },
+      })
+      if (!existingLog) {
+        await this.prisma.taskTimeLog.create({
+          data: {
+            org: { connect: { id: u.orgId } },
+            userId: u.sub,
+            startTime: inTime,
+            endTime: outTime,
+            durationMinutes,
+            description: `Attendance - ${attendance.status || 'present'}`,
+          } as any,
+        })
+      }
+    }
+
+    return attendance
   }
 
   @Get('dashboard')
