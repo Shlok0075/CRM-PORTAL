@@ -160,18 +160,35 @@ export class PortalController {
   async createMyTimesheet(@Req() req: any, @Body() body: any) {
     const u = this.user(req)
     if (u.roleType !== 'employee') {
-      throw new Error('Only employees can create timesheet entries')
+      throw new BadRequestException('Only employees can create timesheet entries')
+    }
+    if (!body.startTime) {
+      throw new BadRequestException('Start time is required')
+    }
+    const startTime = new Date(body.startTime)
+    if (isNaN(startTime.getTime())) {
+      throw new BadRequestException('Invalid start time format')
     }
     const data: any = {
       org: { connect: { id: u.orgId } },
       userId: u.sub,
-      startTime: new Date(body.startTime),
+      startTime,
       description: body.description || 'Manual entry',
     }
-    if (body.endTime) data.endTime = new Date(body.endTime)
-    if (body.durationMinutes) data.durationMinutes = Number(body.durationMinutes)
-    else if (body.endTime) data.durationMinutes = Math.round((new Date(body.endTime).getTime() - new Date(body.startTime).getTime()) / 60000)
-    return this.prisma.taskTimeLog.create({ data: data as any })
+    if (body.endTime) {
+      const endTime = new Date(body.endTime)
+      if (!isNaN(endTime.getTime())) {
+        data.endTime = endTime
+        if (body.durationMinutes) data.durationMinutes = Number(body.durationMinutes)
+        else data.durationMinutes = Math.round((endTime.getTime() - startTime.getTime()) / 60000)
+      }
+    }
+    try {
+      return await this.prisma.taskTimeLog.create({ data: data as any })
+    } catch (err: any) {
+      console.error('CREATE TIMESHEET ERROR:', err.message, err.stack, JSON.stringify({ body, data }))
+      throw new BadRequestException('Failed to create timesheet entry: ' + (err.message || 'Unknown error'))
+    }
   }
 
   @Patch('my-timesheet/:id')
