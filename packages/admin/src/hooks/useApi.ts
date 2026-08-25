@@ -36,8 +36,13 @@ export default function useApi(url: string | null, options: any = {}) {
       }
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       if (res.status === 204) { setData(null); return }
-      const json = await res.json()
-      setData(json)
+      const text = await res.text()
+      try {
+        const json = JSON.parse(text)
+        setData(json)
+      } catch {
+        setData(null)
+      }
     } catch (e: any) {
       setError(e.message)
     } finally {
@@ -76,9 +81,15 @@ export default function useApi(url: string | null, options: any = {}) {
         throw err
       }
       if (res.status === 204) { setData(null); return null }
-      const json = await res.json()
-      setData(json)
-      return json
+      const text = await res.text()
+      try {
+        const json = JSON.parse(text)
+        setData(json)
+        return json
+      } catch {
+        setData(null)
+        return null
+      }
     } catch (e: any) {
       setError(e.message)
       throw e
