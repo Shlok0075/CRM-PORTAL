@@ -22,9 +22,9 @@ export default function Communication() {
         apiFetch('/communication/templates').catch(() => ({ data: [] })),
         apiFetch('/clients?limit=100').catch(() => ({ data: [] })),
       ])
-      setMessages(msgData?.data || msgData || [])
-      setTemplates(tplData?.data || tplData || [])
-      setClients(cliData?.data || cliData || [])
+      setMessages(Array.isArray(msgData?.data) ? msgData.data : Array.isArray(msgData) ? msgData : [])
+      setTemplates(Array.isArray(tplData?.data) ? tplData.data : Array.isArray(tplData) ? tplData : [])
+      setClients(Array.isArray(cliData?.data) ? cliData.data : Array.isArray(cliData) ? cliData : [])
     } catch (err: any) {
       setError(err.message)
     } finally {

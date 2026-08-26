@@ -15,7 +15,7 @@ export default function Todos() {
     mutate: mutateTodos,
   } = useApi('/todos')
 
-  const todos = todosData?.data || todosData || []
+  const todos = Array.isArray(todosData?.data) ? todosData.data : Array.isArray(todosData) ? todosData : []
 
   const {
     data: usersData,

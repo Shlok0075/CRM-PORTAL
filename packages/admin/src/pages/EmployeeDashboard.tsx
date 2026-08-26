@@ -11,9 +11,9 @@ export default function EmployeeDashboard() {
   const attendanceApi = useApi('/portal/my-attendance')
 
   const dashboard = dashboardApi.data || {}
-  const tasks = tasksApi.data?.items || tasksApi.data || []
-  const timesheets = timesheetApi.data || []
-  const attendance = attendanceApi.data?.data || attendanceApi.data || []
+  const tasks = Array.isArray(tasksApi.data?.items) ? tasksApi.data.items : Array.isArray(tasksApi.data) ? tasksApi.data : []
+  const timesheets = Array.isArray(timesheetApi.data) ? timesheetApi.data : []
+  const attendance = Array.isArray(attendanceApi.data?.data) ? attendanceApi.data.data : Array.isArray(attendanceApi.data) ? attendanceApi.data : []
 
   const loading = dashboardApi.loading || tasksApi.loading || timesheetApi.loading || attendanceApi.loading
   const error = dashboardApi.error || tasksApi.error || timesheetApi.error || attendanceApi.error

@@ -37,7 +37,7 @@ export default function Events() {
   }, [searchTerm, statusFilter])
 
   const eventsApi = useApi(`/events?${params}`)
-  const events = eventsApi.data?.data || eventsApi.data || []
+  const events = Array.isArray(eventsApi.data?.data) ? eventsApi.data.data : Array.isArray(eventsApi.data) ? eventsApi.data : []
   const loading = eventsApi.loading
 
   const activeApi = useApi(activeEventId ? `/events/${activeEventId}` : null)

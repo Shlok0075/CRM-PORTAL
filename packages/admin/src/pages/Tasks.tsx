@@ -19,7 +19,7 @@ export default function Tasks() {
   }, [searchTerm, statusFilter])
 
   const tasksApi = useApi(`/tasks?${params}`)
-  const tasks = tasksApi.data?.data || tasksApi.data || []
+  const tasks = Array.isArray(tasksApi.data?.data) ? tasksApi.data.data : Array.isArray(tasksApi.data) ? tasksApi.data : []
   const loading = tasksApi.loading
 
   const activeTaskApi = useApi(activeTaskId ? `/tasks/${activeTaskId}` : null)

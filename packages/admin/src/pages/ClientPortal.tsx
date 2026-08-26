@@ -9,8 +9,8 @@ export default function ClientPortal() {
   const tasksApi = useApi('/portal/my-tasks?limit=10')
 
   const dashboard = dashboardApi.data || {}
-  const invoices = invoicesApi.data || []
-  const tasks = tasksApi.data?.items || tasksApi.data || []
+  const invoices = Array.isArray(invoicesApi.data) ? invoicesApi.data : []
+  const tasks = Array.isArray(tasksApi.data?.items) ? tasksApi.data.items : Array.isArray(tasksApi.data) ? tasksApi.data : []
 
   const loading = dashboardApi.loading || invoicesApi.loading || tasksApi.loading
   const error = dashboardApi.error || invoicesApi.error || tasksApi.error
@@ -23,11 +23,11 @@ export default function ClientPortal() {
   const outstandingAmount = dashboard.outstandingAmount || 0
   const recentInvoices = dashboard.recentInvoices || []
 
-  const filteredTasks = tasks.filter((t: any) => {
+  const filteredTasks = Array.isArray(tasks) ? tasks.filter((t: any) => {
     if (activeTab === 'pending') return t.status === 'pending' || t.status === 'in_progress'
     if (activeTab === 'completed') return t.status === 'completed' || t.status === 'verified'
     return true
-  })
+  }) : []
 
   if (loading) return (
     <div className="flex items-center justify-center h-96">

@@ -25,29 +25,29 @@ export default function AdminDashboard() {
   const clientsApi = useApi('/clients?limit=50')
 
   const dashboard = dashboardApi.data || {}
-  const clients = clientsApi.data?.data || clientsApi.data || []
+  const clients = Array.isArray(clientsApi.data?.data) ? clientsApi.data.data : Array.isArray(clientsApi.data) ? clientsApi.data : []
 
   const loading = dashboardApi.loading || clientsApi.loading
   const error = dashboardApi.error || clientsApi.error
 
   const [activeTab, setActiveTab] = useState<'all' | 'overdue' | 'upcoming'>('all')
 
-  const tasks = dashboard.recentTasks || []
-  const invoices = dashboard.recentInvoices || []
-  const compliance = dashboard.upcomingCompliance || []
+  const tasks = Array.isArray(dashboard.recentTasks) ? dashboard.recentTasks : []
+  const invoices = Array.isArray(dashboard.recentInvoices) ? dashboard.recentInvoices : []
+  const compliance = Array.isArray(dashboard.upcomingCompliance) ? dashboard.upcomingCompliance : []
 
   const totalClients = dashboard.totalClients || 0
-  const tasksByStatus = dashboard.tasksByStatus || []
+  const tasksByStatus = Array.isArray(dashboard.tasksByStatus) ? dashboard.tasksByStatus : []
 
-  const filteredTasks = tasks.filter((t: any) => {
+  const filteredTasks = Array.isArray(tasks) ? tasks.filter((t: any) => {
     if (activeTab === 'overdue') return t.isOverdue || t.status === 'overdue'
     if (activeTab === 'upcoming') return t.status === 'pending' || t.status === 'in_progress'
     return true
-  })
+  }) : []
 
   const pendingTasks = tasksByStatus.find((s: any) => s.status === 'pending')?._count?.status || 0
   const inProgressTasks = tasksByStatus.find((s: any) => s.status === 'in_progress')?._count?.status || 0
-  const completedTasks = tasksByStatus.filter((s: any) => s.status === 'completed' || s.status === 'verified').reduce((a: number, s: any) => a + s._count?.status, 0)
+  const completedTasks = Array.isArray(tasksByStatus) ? tasksByStatus.filter((s: any) => s.status === 'completed' || s.status === 'verified').reduce((a: number, s: any) => a + s._count?.status, 0) : 0
   const overdueTasks = tasksByStatus.find((s: any) => s.status === 'overdue')?._count?.status || 0
 
   const outstandingAmount = invoices.reduce((sum: number, inv: any) => {

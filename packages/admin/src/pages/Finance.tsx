@@ -18,9 +18,9 @@ export default function Finance() {
   const { data: clientsData } = useApi('/clients?limit=100')
   const clients = clientsData?.data || clientsData || []
 
-  const invoices = invData?.data || invData || []
-  const receipts = rcpData?.data || rcpData || []
-  const expenses = expData?.data || expData || []
+  const invoices = Array.isArray(invData?.data) ? invData.data : Array.isArray(invData) ? invData : []
+  const receipts = Array.isArray(rcpData?.data) ? rcpData.data : Array.isArray(rcpData) ? rcpData : []
+  const expenses = Array.isArray(expData?.data) ? expData.data : Array.isArray(expData) ? expData : []
 
   const loading = invLoading || rcpLoading || expLoading
   const error = invError || rcpError || expError
