@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Plus, Search, Mail, Phone, MapPin, ChevronRight, X, RefreshCw, Edit } from 'lucide-react'
-import { apiFetch } from '../lib/api'
+import { useEffect, useState, useRef } from 'react'
+import { Plus, Search, Mail, Phone, MapPin, ChevronRight, X, RefreshCw, Edit, Upload, FileText, Trash2, Download } from 'lucide-react'
+import { apiFetch, API_BASE } from '../lib/api'
 
 export default function Clients() {
   const [clients, setClients] = useState<any[]>([])
@@ -13,6 +13,14 @@ export default function Clients() {
   const [selectedClient, setSelectedClient] = useState<any | null>(null)
   const [editingClient, setEditingClient] = useState<any | null>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [clientDocs, setClientDocs] = useState<any[]>([])
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [docsError, setDocsError] = useState<string | null>(null)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [docCategory, setDocCategory] = useState('')
+  const [docNotes, setDocNotes] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const loadClients = async () => {
     setLoading(true)
@@ -31,6 +39,14 @@ export default function Clients() {
   }
 
   useEffect(() => { loadClients() }, [searchTerm, statusFilter])
+
+  useEffect(() => {
+    if (selectedClient?.id) {
+      loadClientDocs(selectedClient.id)
+    } else {
+      setClientDocs([])
+    }
+  }, [selectedClient?.id])
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -116,6 +132,94 @@ export default function Clients() {
       case 'active': return 'bg-emerald-50 text-emerald-700'
       case 'inactive': return 'bg-gray-100 text-gray-600'
       default: return 'bg-gray-100 text-gray-600'
+    }
+  }
+
+  const loadClientDocs = async (clientId: string) => {
+    setDocsLoading(true)
+    setDocsError(null)
+    try {
+      const data = await apiFetch(`/documents/by-client/${clientId}`)
+      setClientDocs(data?.data || data || [])
+    } catch (err: any) {
+      setDocsError(err.message)
+    } finally {
+      setDocsLoading(false)
+    }
+  }
+
+  const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) setSelectedFile(file)
+  }
+
+  const handleUploadDocument = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedClient || !selectedFile) return
+    setUploadingDoc(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        try {
+          const base64Data = ev.target?.result as string
+          await apiFetch('/documents/upload-file', {
+            method: 'POST',
+            body: JSON.stringify({
+              fileName: selectedFile.name,
+              category: docCategory || 'Uncategorized',
+              fileData: base64Data,
+              fileType: selectedFile.type,
+              fileSize: selectedFile.size,
+              clientId: selectedClient.id,
+              notes: docNotes,
+            }),
+          })
+          setSelectedFile(null)
+          setDocCategory('')
+          setDocNotes('')
+          if (fileInputRef.current) fileInputRef.current.value = ''
+          if (selectedClient?.id) loadClientDocs(selectedClient.id)
+        } catch (err: any) {
+          alert(err.data?.message || err.message || 'Failed to upload document')
+        } finally {
+          setUploadingDoc(false)
+        }
+      }
+      reader.readAsDataURL(selectedFile)
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload document')
+      setUploadingDoc(false)
+    }
+  }
+
+  const handleDeleteDocument = async (docId: string) => {
+    if (!confirm('Are you sure you want to delete this document?')) return
+    try {
+      await apiFetch(`/documents/${docId}`, { method: 'DELETE' })
+      if (selectedClient?.id) loadClientDocs(selectedClient.id)
+    } catch (err: any) {
+      alert(err.data?.message || err.message || 'Failed to delete document')
+    }
+  }
+
+  const handleDownloadDocument = async (doc: any) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/documents/${doc.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Download failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = doc.fileName || 'document'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err.message || 'Failed to download document')
     }
   }
 
@@ -255,6 +359,69 @@ export default function Clients() {
                     )})}
                   </div>
                 </div>
+              </div>
+
+              <div className="border-t border-gray-100 pt-6">
+                <h4 className="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2"><FileText size={18} />Documents</h4>
+
+                <form onSubmit={handleUploadDocument} className="space-y-3 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="form-label">Category</label>
+                      <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="form-input">
+                        <option value="">Select category</option>
+                        <option>Financial Statements</option>
+                        <option>Bank Statements</option>
+                        <option>Purchase/Sales Register</option>
+                        <option>TDS Certificates</option>
+                        <option>PAN/Aadhaar/KYC</option>
+                        <option>DSC</option>
+                        <option>Agreements</option>
+                        <option>Notices/Orders</option>
+                        <option>Filed Returns</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="form-label">File</label>
+                      <input ref={fileInputRef} type="file" onChange={handleDocFileSelect} className="form-input text-sm" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="form-label">Notes</label>
+                    <input value={docNotes} onChange={(e) => setDocNotes(e.target.value)} className="form-input" placeholder="Optional notes" />
+                  </div>
+                  <button type="submit" disabled={uploadingDoc || !selectedFile} className="btn-primary flex items-center gap-2 disabled:opacity-50">
+                    <Upload size={16} />{uploadingDoc ? 'Uploading...' : 'Upload Document'}
+                  </button>
+                </form>
+
+                {docsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="w-6 h-6 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                  </div>
+                ) : docsError ? (
+                  <div className="bg-red-50 text-red-700 p-3 rounded-xl text-sm">{docsError}</div>
+                ) : clientDocs.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-4">No documents uploaded for this client yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {clientDocs.map((doc: any) => (
+                      <div key={doc.id} className="flex items-center justify-between p-3 bg-gray-50/80 rounded-xl">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2 bg-white rounded-lg shadow-sm"><FileText size={16} className="text-gray-500" /></div>
+                          <div>
+                            <p className="font-medium text-sm text-gray-900">{doc.fileName || 'Untitled'}</p>
+                            <p className="text-xs text-gray-500">{doc.category || 'Uncategorized'} • {doc.fileType}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button onClick={() => handleDownloadDocument(doc)} className="p-1.5 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors" title="Download"><Download size={14} /></button>
+                          <button onClick={() => handleDeleteDocument(doc.id)} className="p-1.5 hover:bg-red-50 rounded-lg text-red-500 transition-colors" title="Delete"><Trash2 size={14} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           </div>

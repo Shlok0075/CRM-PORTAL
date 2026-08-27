@@ -183,6 +183,13 @@ export class DocumentsService {
     return doc
   }
 
+  async remove(orgId: string, id: string) {
+    const doc = await this.prisma.document.findFirst({ where: { id, orgId } })
+    if (!doc) return null
+    await this.prisma.document.delete({ where: { id } })
+    return { id }
+  }
+
   async bulkDownload(orgId: string, documentIds: string[], res?: Response) {
     if (!documentIds.length) {
       if (res) {

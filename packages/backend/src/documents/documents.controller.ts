@@ -158,4 +158,11 @@ export class DocumentsController {
 
     res.status(404).json({ message: 'File not found' })
   }
+
+  @UseGuards(JwtGuard)
+  @Delete(':id')
+  async remove(@Req() req: any, @Param('id') id: string) {
+    const orgId = req.user?.orgId
+    return this.svc.remove(orgId, id)
+  }
 }
