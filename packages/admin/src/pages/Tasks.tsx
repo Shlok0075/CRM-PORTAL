@@ -1,7 +1,7 @@
-import { useState, useMemo } from 'react'
-import { Plus, Search, AlertTriangle, CheckCircle2, Circle, Play, X, ChevronRight, RefreshCw } from 'lucide-react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { Plus, Search, AlertTriangle, CheckCircle2, Circle, Play, X, ChevronRight, RefreshCw, Upload, FileText, Trash2, Download } from 'lucide-react'
 import useApi from '../hooks/useApi'
-import { apiFetch } from '../lib/api'
+import { apiFetch, API_BASE } from '../lib/api'
 
 export default function Tasks() {
   const [searchTerm, setSearchTerm] = useState('')
@@ -10,6 +10,12 @@ export default function Tasks() {
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [taskDocs, setTaskDocs] = useState<any[]>([])
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [docCategory, setDocCategory] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const params = useMemo(() => {
     const p = new URLSearchParams()
@@ -89,6 +95,94 @@ export default function Tasks() {
 
   const handleViewTask = (task: any) => {
     setActiveTaskId(task.id)
+  }
+
+  useEffect(() => {
+    if (activeTaskId) {
+      setDocsLoading(true)
+      apiFetch(`/documents/by-task/${activeTaskId}`)
+        .then((data: any) => setTaskDocs(data?.data || data || []))
+        .catch(() => setTaskDocs([]))
+        .finally(() => setDocsLoading(false))
+    } else {
+      setTaskDocs([])
+    }
+  }, [activeTaskId])
+
+  const handleDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) setSelectedFile(file)
+  }
+
+  const handleUploadTaskDoc = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedFile || !activeTaskId) return
+    setUploadingDoc(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        try {
+          await apiFetch('/documents/upload-file', {
+            method: 'POST',
+            body: JSON.stringify({
+              fileName: selectedFile.name,
+              category: docCategory || 'Task Document',
+              fileData: ev.target?.result as string,
+              fileType: selectedFile.type,
+              fileSize: selectedFile.size,
+              taskId: activeTaskId,
+            }),
+          })
+          setSelectedFile(null)
+          setDocCategory('')
+          if (fileInputRef.current) fileInputRef.current.value = ''
+          const data = await apiFetch(`/documents/by-task/${activeTaskId}`)
+          setTaskDocs(data?.data || data || [])
+        } catch (err: any) {
+          alert(err.data?.message || err.message || 'Failed to upload document')
+        } finally {
+          setUploadingDoc(false)
+        }
+      }
+      reader.readAsDataURL(selectedFile)
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload document')
+      setUploadingDoc(false)
+    }
+  }
+
+  const handleDeleteTaskDoc = async (docId: string) => {
+    if (!confirm('Delete this document?')) return
+    try {
+      await apiFetch(`/documents/${docId}`, { method: 'DELETE' })
+      if (activeTaskId) {
+        const data = await apiFetch(`/documents/by-task/${activeTaskId}`)
+        setTaskDocs(data?.data || data || [])
+      }
+    } catch (err: any) {
+      alert(err.data?.message || err.message || 'Failed to delete document')
+    }
+  }
+
+  const handleDownloadTaskDoc = async (doc: any) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/documents/${doc.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Download failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = doc.fileName || 'document'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err.message || 'Failed to download document')
+    }
   }
 
   const getStatusBadge = (status: string, isOverdue: boolean) => {
@@ -364,6 +458,55 @@ export default function Tasks() {
                     <p className="text-sm text-gray-700">{activeTask.description}</p>
                   </div>
                 )}
+
+                <div className="border-t border-gray-100 pt-4">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3">Documents</h4>
+                  <form onSubmit={handleUploadTaskDoc} className="space-y-2 mb-3">
+                    <div className="flex gap-2">
+                      <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="form-input text-sm py-2 w-40">
+                        <option value="">Category</option>
+                        <option>Financial Statements</option>
+                        <option>Bank Statements</option>
+                        <option>Purchase/Sales Register</option>
+                        <option>TDS Certificates</option>
+                        <option>PAN/Aadhaar/KYC</option>
+                        <option>DSC</option>
+                        <option>Agreements</option>
+                        <option>Notices/Orders</option>
+                        <option>Filed Returns</option>
+                      </select>
+                      <input ref={fileInputRef} type="file" onChange={handleDocFileSelect} className="form-input text-sm py-2 flex-1" />
+                      <button type="submit" disabled={uploadingDoc || !selectedFile} className="btn-primary text-sm py-2 disabled:opacity-50">
+                        <Upload size={14} />
+                      </button>
+                    </div>
+                  </form>
+                  {docsLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="w-5 h-5 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                    </div>
+                  ) : taskDocs.length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-2">No documents yet.</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {taskDocs.map((doc: any) => (
+                        <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50/80 rounded-lg">
+                          <div className="flex items-center gap-2">
+                            <FileText size={14} className="text-gray-400" />
+                            <div>
+                              <p className="text-xs font-medium text-gray-900">{doc.fileName || 'Untitled'}</p>
+                              <p className="text-[10px] text-gray-500">{doc.category || 'Uncategorized'}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => handleDownloadTaskDoc(doc)} className="p-1 hover:bg-gray-100 rounded text-gray-500"><Download size={12} /></button>
+                            <button onClick={() => handleDeleteTaskDoc(doc.id)} className="p-1 hover:bg-red-50 rounded text-red-500"><Trash2 size={12} /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="flex gap-3">
                   <button onClick={async () => { await handleStatusChange(activeTask.id, 'in_progress'); setActiveTaskId(null) }} className="btn-primary flex items-center gap-2"><Play size={16} /> Start</button>
                   <button onClick={async () => { await handleStatusChange(activeTask.id, 'completed'); setActiveTaskId(null) }} className="btn-secondary flex items-center gap-2"><CheckCircle2 size={16} /> Complete</button>

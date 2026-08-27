@@ -1,6 +1,6 @@
-import { useState } from 'react'
-import { Plus, FileText, Receipt, CreditCard, TrendingUp, X, AlertTriangle, Clock, Eye, MoreVertical, RefreshCw } from 'lucide-react'
-import { apiFetch } from '../lib/api'
+import { useState, useRef, useEffect } from 'react'
+import { Plus, FileText, Receipt, CreditCard, TrendingUp, X, AlertTriangle, Clock, Eye, MoreVertical, RefreshCw, Upload, Trash2, Download } from 'lucide-react'
+import { apiFetch, API_BASE } from '../lib/api'
 import useApi from '../hooks/useApi'
 
 export default function Finance() {
@@ -11,6 +11,12 @@ export default function Finance() {
   const [showViewModal, setShowViewModal] = useState(false)
   const [selectedInvoice, setSelectedInvoice] = useState<any>(null)
   const [submitting, setSubmitting] = useState(false)
+  const [invoiceDocs, setInvoiceDocs] = useState<any[]>([])
+  const [docsLoading, setDocsLoading] = useState(false)
+  const [uploadingDoc, setUploadingDoc] = useState(false)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
+  const [docCategory, setDocCategory] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { data: invData, loading: invLoading, error: invError, refetch: refetchInvoices } = useApi('/finance/invoices')
   const { data: rcpData, loading: rcpLoading, error: rcpError, refetch: refetchReceipts } = useApi('/finance/receipts')
@@ -34,6 +40,93 @@ export default function Finance() {
   const viewInvoice = (inv: any) => {
     setSelectedInvoice(inv)
     setShowViewModal(true)
+    setInvoiceDocs([])
+  }
+
+  useEffect(() => {
+    if (selectedInvoice?.id) {
+      setDocsLoading(true)
+      apiFetch(`/documents?clientId=${selectedInvoice.clientId}`)
+        .then((data: any) => setInvoiceDocs(data?.data || data || []))
+        .catch(() => setInvoiceDocs([]))
+        .finally(() => setDocsLoading(false))
+    }
+  }, [selectedInvoice?.id])
+
+  const handleInvoiceDocFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) setSelectedFile(file)
+  }
+
+  const handleUploadInvoiceDoc = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!selectedFile || !selectedInvoice?.clientId) return
+    setUploadingDoc(true)
+    try {
+      const reader = new FileReader()
+      reader.onload = async (ev) => {
+        try {
+          await apiFetch('/documents/upload-file', {
+            method: 'POST',
+            body: JSON.stringify({
+              fileName: selectedFile.name,
+              category: docCategory || 'Invoice Document',
+              fileData: ev.target?.result as string,
+              fileType: selectedFile.type,
+              fileSize: selectedFile.size,
+              clientId: selectedInvoice.clientId,
+            }),
+          })
+          setSelectedFile(null)
+          setDocCategory('')
+          if (fileInputRef.current) fileInputRef.current.value = ''
+          const data = await apiFetch(`/documents?clientId=${selectedInvoice.clientId}`)
+          setInvoiceDocs(data?.data || data || [])
+        } catch (err: any) {
+          alert(err.data?.message || err.message || 'Failed to upload document')
+        } finally {
+          setUploadingDoc(false)
+        }
+      }
+      reader.readAsDataURL(selectedFile)
+    } catch (err: any) {
+      alert(err.message || 'Failed to upload document')
+      setUploadingDoc(false)
+    }
+  }
+
+  const handleDeleteInvoiceDoc = async (docId: string) => {
+    if (!confirm('Delete this document?')) return
+    try {
+      await apiFetch(`/documents/${docId}`, { method: 'DELETE' })
+      if (selectedInvoice?.clientId) {
+        const data = await apiFetch(`/documents?clientId=${selectedInvoice.clientId}`)
+        setInvoiceDocs(data?.data || data || [])
+      }
+    } catch (err: any) {
+      alert(err.data?.message || err.message || 'Failed to delete document')
+    }
+  }
+
+  const handleDownloadInvoiceDoc = async (doc: any) => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token')
+      const res = await fetch(`${API_BASE}/documents/${doc.id}/download`, {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (!res.ok) throw new Error('Download failed')
+      const blob = await res.blob()
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = doc.fileName || 'document'
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+    } catch (err: any) {
+      alert(err.message || 'Failed to download document')
+    }
   }
 
   const printInvoice = (inv: any) => {
@@ -539,6 +632,55 @@ export default function Finance() {
                   </table>
                 </div>
               )}
+
+              <div className="border-t border-gray-100 pt-4">
+                <h4 className="text-xs font-semibold text-gray-700 mb-2 uppercase tracking-wider">Documents</h4>
+                <form onSubmit={handleUploadInvoiceDoc} className="space-y-2 mb-3">
+                  <div className="flex gap-2">
+                    <select value={docCategory} onChange={(e) => setDocCategory(e.target.value)} className="form-input text-sm py-2 w-40">
+                      <option value="">Category</option>
+                      <option>Financial Statements</option>
+                      <option>Bank Statements</option>
+                      <option>Purchase/Sales Register</option>
+                      <option>TDS Certificates</option>
+                      <option>PAN/Aadhaar/KYC</option>
+                      <option>DSC</option>
+                      <option>Agreements</option>
+                      <option>Notices/Orders</option>
+                      <option>Filed Returns</option>
+                    </select>
+                    <input ref={fileInputRef} type="file" onChange={handleInvoiceDocFileSelect} className="form-input text-sm py-2 flex-1" />
+                    <button type="submit" disabled={uploadingDoc || !selectedFile} className="btn-primary text-sm py-2 disabled:opacity-50">
+                      <Upload size={14} />
+                    </button>
+                  </div>
+                </form>
+                {docsLoading ? (
+                  <div className="flex items-center justify-center py-3">
+                    <div className="w-5 h-5 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+                  </div>
+                ) : invoiceDocs.length === 0 ? (
+                  <p className="text-xs text-gray-400 text-center py-2">No documents for this client yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    {invoiceDocs.map((doc: any) => (
+                      <div key={doc.id} className="flex items-center justify-between p-2 bg-gray-50/80 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <FileText size={14} className="text-gray-400" />
+                          <div>
+                            <p className="text-xs font-medium text-gray-900">{doc.fileName || 'Untitled'}</p>
+                            <p className="text-[10px] text-gray-500">{doc.category || 'Uncategorized'}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => handleDownloadInvoiceDoc(doc)} className="p-1 hover:bg-gray-100 rounded text-gray-500"><Download size={12} /></button>
+                          <button onClick={() => handleDeleteInvoiceDoc(doc.id)} className="p-1 hover:bg-red-50 rounded text-red-500"><Trash2 size={12} /></button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             <div className="p-6 border-t border-gray-100 flex justify-end gap-3">
               <button onClick={() => { setShowViewModal(false); printInvoice(selectedInvoice) }} className="btn-primary">Download / Print</button>
