@@ -207,15 +207,13 @@ export class TasksService {
     if (cleaned.description) data.description = cleaned.description
     if (cleaned.clientId) data.client = { connect: { id: cleaned.clientId } }
     if (cleaned.reviewerId) data.reviewerId = cleaned.reviewerId
-    if (cleaned.assigneeIds) {
-      data.assignee = { connect: { id: Array.isArray(cleaned.assigneeIds) ? cleaned.assigneeIds[0] : cleaned.assigneeIds } }
-    }
+    const assigneeId = this.normalizeAssigneeIds(cleaned.assigneeIds)
+    if (assigneeId) data.assignee = { connect: { id: assigneeId } }
     if (recurrenceRuleId) data.recurrenceRule = { connect: { id: recurrenceRuleId } }
     console.log('CREATE TASK DATA:', JSON.stringify(data))
     try {
       const task = this.serializeTask(await this.prisma.task.create({ data }))
-      if (cleaned.assigneeIds) {
-        const assigneeId = Array.isArray(cleaned.assigneeIds) ? cleaned.assigneeIds[0] : cleaned.assigneeIds
+      if (assigneeId) {
         this.notifications.create(orgId, assigneeId, 'task.assigned', { taskId: task.id, title: task.title }).catch(() => {})
       }
       return task
